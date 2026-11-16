@@ -130,8 +130,7 @@ int main(int argc, char** argv) {
     CHECK(g.spawnPhase, "spawn phase waits for the players");
     CHECK(g1.players[1].name == "Yfer" && g1.players[g1.humanId].name.compare(0, 4, "Anna") == 0, "names are used in the game");
     CHECK(g.players[2].name != g.players[3].name, "equal names are made different");
-    printf("  in-game names: %s | %s | %s
-", g.players[1].name.c_str(), g.players[2].name.c_str(), g.players[3].name.c_str());
+    printf("  in-game names: %s | %s | %s\n", g.players[1].name.c_str(), g.players[2].name.c_str(), g.players[3].name.c_str());
     CHECK(g.players[g2.humanId].name.find('<') == std::string::npos && g.players[g2.humanId].name.size() <= kMaxNameLength,
           "names are cleaned up");
 
