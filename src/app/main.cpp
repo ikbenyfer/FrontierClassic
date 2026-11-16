@@ -14,6 +14,10 @@ using namespace fc;
 
 static std::string g_saveDir;
 
+#if defined(__IPHONEOS__)
+extern "C" char* fc_ios_save_dir(void);
+#endif
+
 static std::string resourceDir() {
     char* base = SDL_GetBasePath();
     std::string r = base ? base : "./";
@@ -30,9 +34,11 @@ static std::string resourceDir() {
 
 static std::string saveDirectory() {
 #if defined(__IPHONEOS__)
-    // the app's own Documents folder (local, visible in iTunes file sharing)
-    const char* home = getenv("HOME");
-    return std::string(home ? home : ".") + "/Documents/";
+    // the app's own Documents folder (see ios/ios_shims.m)
+    char* p = fc_ios_save_dir();
+    std::string r = p ? p : "./";
+    free(p);
+    return r;
 #else
     char* p = SDL_GetPrefPath("YF", "FrontierClassic");
     std::string r = p ? p : "./";

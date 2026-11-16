@@ -65,6 +65,7 @@ private:
     double simAcc_ = 0;
     bool gameOverSeen_ = false;
     bool uiLocked_ = false;
+    bool saveOk_ = false;
     std::string toast_;
     Uint32 toastUntil_ = 0;
     Uint32 lastAutosave_ = 0;

@@ -37,6 +37,11 @@ bool App::init(const std::string& resDir, const std::string& saveDir, std::strin
         return false;
     }
     loadSettings();
+    // write test: can we save in the save folder?
+    std::string probe = saveDir_ + "write_test.tmp";
+    saveOk_ = writeFileAtomic(probe, "ok");
+    remove(probe.c_str());
+    if (!saveOk_) showToast("Let op: opslaan werkt niet in " + saveDir_);
     lastAutosave_ = SDL_GetTicks();
     return true;
 }
@@ -541,6 +546,8 @@ void App::renderInfo() {
         gfx.text(70, y, lines[k], 21, k == 0 ? C_ACCENT : C_TEXT);
         y += lines[k][0] ? 32 : 14;
     }
+    gfx.text(300, H_ - 82.0f, saveOk_ ? "Opslaan werkt. Map:" : "OPSLAAN WERKT NIET. Map:", 16, saveOk_ ? C_GOOD : C_BAD);
+    gfx.text(300, H_ - 58.0f, saveDir_, 14, C_DIM);
     if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
 }
 
