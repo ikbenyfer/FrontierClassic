@@ -13,7 +13,11 @@ namespace fc {
 const int kDefaultPort = 47800;
 const int kMaxClients = 7;
 const unsigned kProtocolMagic = 0x504D4346;  // "FCMP"
-const unsigned kProtocolVersion = 1;
+const unsigned kProtocolVersion = 2;
+const size_t kMaxNameLength = 12;
+
+// Makes a player name safe to show: printable ASCII, 1..12 characters.
+std::string cleanPlayerName(const std::string& name);
 
 enum OrderKind { ORD_SPAWN = 1, ORD_ATTACK, ORD_BUILD, ORD_UPGRADE, ORD_RECRUIT };
 
@@ -26,9 +30,11 @@ public:
     int clientCount() const;  // connected and greeted
 
     // Lobby: accept players and keep them informed. `info` is shown to them.
-    void pumpLobby(const std::string& info);
+    void pumpLobby(const std::string& info, const std::string& hostName);
+    // Names of everyone in the lobby, the host first.
+    std::vector<std::string> lobbyNames(const std::string& hostName) const;
     // Start: the game must have been created with numHumans = 1 + clientCount().
-    void startGame(Game& g);
+    void startGame(Game& g, const std::string& hostName);
     // In game: apply the clients' orders; a player who drops out becomes an AI.
     void pumpGame(Game& g);
     // Sends the state to everyone (throttled internally).
@@ -39,6 +45,7 @@ private:
         Conn conn;
         bool greeted = false;
         int playerId = 0;
+        std::string name;
         unsigned lastEventSeq = 0;
     };
     Listener listener_;
@@ -61,13 +68,14 @@ class ClientSession {
 public:
     enum State { IDLE, CONNECTING, LOBBY, PLAYING, CLOSED };
 
-    bool connect(const std::string& host, int port, std::string* err);
+    bool connect(const std::string& host, int port, const std::string& name, std::string* err);
     void close();
     State state() const { return state_; }
     const std::string& closeReason() const { return reason_; }
     int lobbySlot() const { return slot_; }
     int lobbyCount() const { return count_; }
     const std::string& lobbyInfo() const { return info_; }
+    const std::vector<std::string>& lobbyNames() const { return names_; }
 
     // Reads messages and applies them to `g`. Returns true when the game has
     // just started (the caller must rebuild its map graphics).
@@ -79,7 +87,8 @@ public:
 private:
     Conn conn_;
     State state_ = IDLE;
-    std::string reason_, info_;
+    std::string reason_, info_, name_;
+    std::vector<std::string> names_;
     int slot_ = 0, count_ = 0;
     bool helloSent_ = false;
     std::vector<std::string> toasts_;

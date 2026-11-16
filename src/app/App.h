@@ -10,7 +10,7 @@
 
 namespace fc {
 
-enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY };
+enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY, SCR_NAME };
 enum NetMode { NET_OFF, NET_HOST, NET_CLIENT };
 enum Overlay { OV_NONE, OV_PAUSE, OV_GAMEOVER };
 
@@ -32,6 +32,9 @@ public:
     bool joinGame(const std::string& ip, int port, std::string* err);
     void leaveMultiplayer();
     HostSession& hostSession() { return host_; }
+    bool lookupPublicIp = true;  // off in automated runs (no calls to outside services)
+    void setPlayerName(const std::string& n) { playerName_ = cleanPlayerName(n); }
+    const std::string& playerName() const { return playerName_; }
     ClientSession& clientSession() { return client_; }
     void autosave();
     bool quitRequested() const { return quit_; }
@@ -92,6 +95,10 @@ private:
     ClientSession client_;
     bool mpSetup_ = false;          // "new game" screen is being used to set up a hosted game
     std::string joinIp_, portText_ = "47800";
+    std::string playerName_ = "Speler";
+    PublicIp publicIp_;
+    void renderName();
+    void playerList(float x, float y, const std::vector<std::string>& names, int self);
     int field_ = 0;                 // join screen: 0 = IP, 1 = port
     void enterGameScreen();
     std::string lobbyInfo() const;

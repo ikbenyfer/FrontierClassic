@@ -258,6 +258,95 @@ bool Conn::next(uint8_t& type, std::vector<uint8_t>& payload) {
     return true;
 }
 
+void Conn::sendRaw(const std::string& bytes) {
+    if (fd_ < 0) return;
+    out_.insert(out_.end(), bytes.begin(), bytes.end());
+}
+
+std::string Conn::takeRaw() {
+    std::string s(in_.begin(), in_.end());
+    in_.clear();
+    return s;
+}
+
+// ------------------------------------------------------------------ PublicIp
+
+static const char* const kIpServices[] = {"api.ipify.org", "checkip.amazonaws.com", "icanhazip.com"};
+static const int kIpServiceCount = 3;
+
+std::string PublicIp::parse(const std::string& response) {
+    size_t body = response.find("\r\n\r\n");
+    if (body == std::string::npos || response.compare(0, 5, "HTTP/") != 0) return std::string();
+    if (response.find(" 200") > 15) return std::string();  // status line must say 200
+    const std::string b = response.substr(body + 4);
+    // first token that looks like a.b.c.d with each part 0..255
+    for (size_t i = 0; i < b.size(); ++i) {
+        if (b[i] < '0' || b[i] > '9') continue;
+        if (i > 0 && (b[i - 1] == '.' || (b[i - 1] >= '0' && b[i - 1] <= '9'))) continue;
+        size_t p = i;
+        int parts = 0;
+        bool ok = true;
+        while (parts < 4 && ok) {
+            int v = 0, digits = 0;
+            while (p < b.size() && b[p] >= '0' && b[p] <= '9' && digits < 4) { v = v * 10 + (b[p] - '0'); ++p; ++digits; }
+            if (digits < 1 || digits > 3 || v > 255) { ok = false; break; }
+            ++parts;
+            if (parts < 4) {
+                if (p < b.size() && b[p] == '.') ++p;
+                else ok = false;
+            }
+        }
+        if (ok && parts == 4 && (p >= b.size() || !((b[p] >= '0' && b[p] <= '9') || b[p] == '.'))) return b.substr(i, p - i);
+    }
+    return std::string();
+}
+
+void PublicIp::start() {
+    conn_.close();
+    ip_.clear();
+    attempt_ = -1;
+    state_ = 1;
+    tryNext();
+}
+
+void PublicIp::tryNext() {
+    conn_.close();
+    buf_.clear();
+    sent_ = false;
+    for (;;) {
+        ++attempt_;
+        if (attempt_ >= kIpServiceCount) { state_ = 3; return; }
+        std::string err;
+        if (conn_.connectTo(kIpServices[attempt_], 80, &err)) break;
+    }
+    startMs_ = netNowMs();
+}
+
+void PublicIp::pump() {
+    if (state_ != 1) return;
+    conn_.pump();
+    if (conn_.ready() && !sent_) {
+        sent_ = true;
+        conn_.sendRaw(std::string("GET / HTTP/1.0\r\nHost: ") + kIpServices[attempt_] +
+                      "\r\nUser-Agent: FrontierClassic\r\nAccept: text/plain\r\nConnection: close\r\n\r\n");
+        conn_.pump();
+    }
+    buf_ += conn_.takeRaw();
+    if (buf_.size() > 16384) buf_.resize(16384);
+    std::string found = parse(buf_);
+    bool closed = !conn_.open();
+    if (!found.empty() && (closed || buf_.size() > found.size())) {
+        // wait for the connection to close so a split address is never cut short
+        if (closed || netNowMs() - startMs_ > 1500) {
+            ip_ = found;
+            state_ = 2;
+            conn_.close();
+            return;
+        }
+    }
+    if (closed || netNowMs() - startMs_ > 6000) tryNext();
+}
+
 // ------------------------------------------------------------------ Listener
 
 bool Listener::listen(int port, std::string* err) {

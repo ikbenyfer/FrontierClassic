@@ -14,7 +14,8 @@ Multiplayer (iPad en Windows door elkaar, tot 8 spelers)
 - Host: Multiplayer > Spel hosten > instellingen kiezen > Open lobby > Start spel.
   Stuur in je router de TCP-poort (standaard 47800) door naar de pc of iPad die host
   (port forwarding) en sta het spel toe in de Windows-firewall als daarom gevraagd wordt.
-  Geef je publieke IP-adres en de poort aan je medespelers.
+  De lobby toont je publieke IP-adres en de poort: geef die twee door aan je medespelers.
+- Naam: Multiplayer > Jouw naam.
 - Meedoen: Multiplayer > Meedoen > IP-adres en poort van de host invullen > Verbinden.
 - Thuis op hetzelfde netwerk gebruik je het lokale adres dat in de lobby van de host staat.
 

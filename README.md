@@ -26,7 +26,8 @@ There is also a **Windows version** (64-bit, one `.exe`), built from the same so
 
 Up to 8 people, iPad and Windows mixed. No central server: one player hosts.
 
-- **Host:** Multiplayer → Spel hosten → choose settings → Open lobby → Start spel. Forward the TCP port (default 47800) in your router to the hosting device and give your public IP address + port to the others.
+- **Name:** Multiplayer → Jouw naam (on-screen keyboard, max 12 characters). Others see it in the lobby and on the map.
+- **Host:** Multiplayer → Spel hosten → choose settings → Open lobby → Start spel. The lobby looks up and shows your public IP address (one plain HTTP request to a what-is-my-IP service, only when a lobby opens) next to the port. Forward that TCP port (default 47800) in your router to the hosting device and pass IP + port on to the others.
 - **Join:** Multiplayer → Meedoen → enter the host's IP address and port.
 - The host runs the simulation and sends the state (changed tiles, player numbers, buildings, ships) about 7 times per second; the others only send their orders. Empty seats and players who leave are played by the AI.
 - Multiplayer games are not saved.

@@ -73,20 +73,28 @@ int main(int argc, char** argv) {
     {
         ClientSession lost;
         Game dummy;
-        CHECK(lost.connect("127.0.0.1", 47990, &err), "connect call");
+        CHECK(lost.connect("127.0.0.1", 47990, "Test", &err), "connect call");
         for (int k = 0; k < 3000 && lost.state() != ClientSession::CLOSED; ++k) { lost.pump(dummy, mapsDir); nap(); }
         CHECK(lost.state() == ClientSession::CLOSED, "connecting to a closed port reports an error");
         printf("  closed port -> \"%s\"\n", lost.closeReason().c_str());
     }
 
+    // reading the public IP out of a web answer
+    CHECK(PublicIp::parse("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n84.25.130.7\n") == "84.25.130.7", "public ip: plain");
+    CHECK(PublicIp::parse("HTTP/1.0 200 OK\r\nX: 1.2.3.4\r\n\r\n  203.0.113.255") == "203.0.113.255", "public ip: body only");
+    CHECK(PublicIp::parse("HTTP/1.1 301 Moved\r\n\r\n1.2.3.4") == "", "public ip: only on status 200");
+    CHECK(PublicIp::parse("HTTP/1.1 200 OK\r\n\r\n<html>error 999.1.1.1</html>") == "", "public ip: rejects nonsense");
+    CHECK(PublicIp::parse("HTTP/1.1 200 OK\r\n\r\n1.2.3") == "" && PublicIp::parse("garbage") == "", "public ip: incomplete");
+    CHECK(cleanPlayerName("") == "Speler" && cleanPlayerName("  Yf er  ") == "Yf er", "name cleaning");
+
     HostSession host;
     CHECK(host.start(port, &err), err.c_str());
     ClientSession c1, c2;
     Game g, g1, g2;
-    CHECK(c1.connect("127.0.0.1", port, &err), err.c_str());
-    CHECK(c2.connect("127.0.0.1", port, &err), err.c_str());
+    CHECK(c1.connect("127.0.0.1", port, "Anna", &err), err.c_str());
+    CHECK(c2.connect("127.0.0.1", port, "  <Anna!>  ", &err), err.c_str());
     for (int k = 0; k < 2000; ++k) {
-        host.pumpLobby("test lobby");
+        host.pumpLobby("test lobby", "Yfer");
         c1.pump(g1, mapsDir);
         c2.pump(g2, mapsDir);
         if (host.clientCount() == 2 && c1.lobbyCount() == 3 && c2.lobbyCount() == 3) break;
@@ -95,6 +103,10 @@ int main(int argc, char** argv) {
     CHECK(host.clientCount() == 2, "two clients in the lobby");
     CHECK(c1.lobbyCount() == 3 && c2.lobbyCount() == 3 && c1.lobbyInfo() == "test lobby", "clients see the lobby");
     CHECK(c1.lobbySlot() != c2.lobbySlot(), "different slots");
+    for (int k = 0; k < 600 && c1.lobbyNames().size() != 3; ++k) { host.pumpLobby("test lobby", "Yfer"); c1.pump(g1, mapsDir); nap(); }
+    CHECK(c1.lobbyNames().size() == 3 && c1.lobbyNames()[0] == "Yfer", "lobby shows the host's name");
+    if (c1.lobbyNames().size() == 3)
+        printf("  lobby names: %s | %s | %s\n", c1.lobbyNames()[0].c_str(), c1.lobbyNames()[1].c_str(), c1.lobbyNames()[2].c_str());
 
     Settings s;
     s.mapId = "europe";
@@ -103,7 +115,7 @@ int main(int argc, char** argv) {
     s.numHumans = 3;
     s.seed = 4242;
     CHECK(g.newGame(s, mapsDir, &err), err.c_str());
-    host.startGame(g);
+    host.startGame(g, "Yfer");
     bool s1 = false, s2 = false;
     for (int k = 0; k < 2000 && !(s1 && s2); ++k) {
         host.pumpGame(g);
@@ -116,6 +128,12 @@ int main(int argc, char** argv) {
     CHECK(g1.humanId != g2.humanId && g1.humanId >= 2 && g2.humanId >= 2, "clients got their own player");
     CHECK(g1.owner == g.owner && g2.owner == g.owner, "start state is identical");
     CHECK(g.spawnPhase, "spawn phase waits for the players");
+    CHECK(g1.players[1].name == "Yfer" && g1.players[g1.humanId].name.compare(0, 4, "Anna") == 0, "names are used in the game");
+    CHECK(g.players[2].name != g.players[3].name, "equal names are made different");
+    printf("  in-game names: %s | %s | %s
+", g.players[1].name.c_str(), g.players[2].name.c_str(), g.players[3].name.c_str());
+    CHECK(g.players[g2.humanId].name.find('<') == std::string::npos && g.players[g2.humanId].name.size() <= kMaxNameLength,
+          "names are cleaned up");
 
     // everybody picks a start; the game begins only when all three have one
     CHECK(g.spawnHuman(freeTileFrom(g, (int)g.owner.size() / 3)), "host spawns");

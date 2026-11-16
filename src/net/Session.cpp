@@ -1,4 +1,5 @@
 #include "Session.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
@@ -14,6 +15,18 @@ enum MsgType {
     MSG_TOAST = 13,  // host -> client: a message for this player
     MSG_BYE = 14,    // host -> client: reason
 };
+
+std::string cleanPlayerName(const std::string& name) {
+    std::string out;
+    for (size_t k = 0; k < name.size() && out.size() < kMaxNameLength; ++k) {
+        char c = name[k];
+        bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-' ||
+                  (c == ' ' && !out.empty());
+        if (ok) out += c;
+    }
+    while (!out.empty() && out[out.size() - 1] == ' ') out.erase(out.size() - 1);
+    return out.empty() ? "Speler" : out;
+}
 
 // ====================================================================== host
 
@@ -77,7 +90,29 @@ void HostSession::dropDead(Game* g) {
     }
 }
 
-void HostSession::pumpLobby(const std::string& info) {
+std::vector<std::string> HostSession::lobbyNames(const std::string& hostName) const {
+    std::vector<std::string> names;
+    names.push_back(cleanPlayerName(hostName));
+    for (size_t k = 0; k < clients_.size(); ++k) {
+        const Client& c = *clients_[k];
+        if (!c.greeted || !c.conn.open()) continue;
+        // the same name twice gets a number, so players can tell each other apart
+        std::string n = c.name;
+        for (int tries = 2; tries < 20; ++tries) {
+            bool taken = false;
+            for (size_t i = 0; i < names.size(); ++i)
+                if (names[i] == n) taken = true;
+            if (!taken) break;
+            char buf[8];
+            snprintf(buf, sizeof buf, " %d", tries);
+            n = c.name.substr(0, kMaxNameLength - strlen(buf)) + buf;
+        }
+        names.push_back(n);
+    }
+    return names;
+}
+
+void HostSession::pumpLobby(const std::string& info, const std::string& hostName) {
     if (!running()) return;
     acceptNew(false);
     for (size_t k = 0; k < clients_.size(); ++k) {
@@ -97,6 +132,7 @@ void HostSession::pumpLobby(const std::string& info) {
                 c.conn.close();
                 break;
             }
+            c.name = cleanPlayerName(r.str());
             c.greeted = true;
             lastLobbyCount_ = -1;
         }
@@ -109,24 +145,31 @@ void HostSession::pumpLobby(const std::string& info) {
         lastLobbyInfo_ = info;
         lastLobbyMs_ = now;
         int slot = 2;
+        std::vector<std::string> names = lobbyNames(hostName);
         for (size_t k = 0; k < clients_.size(); ++k) {
             Client& c = *clients_[k];
-            if (!c.greeted) continue;
+            if (!c.greeted || !c.conn.open()) continue;
             Writer w;
             w.u8(slot++);
             w.u8(count + 1);
             w.str(info);
+            w.u8((unsigned)names.size());
+            for (size_t i = 0; i < names.size(); ++i) w.str(names[i]);
             c.conn.send(MSG_LOBBY, w.b);
             c.conn.pump();
         }
     }
 }
 
-void HostSession::startGame(Game& g) {
+void HostSession::startGame(Game& g, const std::string& hostName) {
     // clients that never said hello are dropped
     for (size_t k = 0; k < clients_.size();)
         if (!clients_[k]->greeted || !clients_[k]->conn.open()) clients_.erase(clients_.begin() + k);
         else ++k;
+    // everyone plays under the name they chose
+    std::vector<std::string> names = lobbyNames(hostName);
+    for (size_t k = 0; k < names.size() && (int)k + 1 < (int)g.players.size(); ++k)
+        if (g.isHuman((int)k + 1)) g.players[k + 1].name = names[k];
     std::string json = g.toJson().dump();
     int id = 2;
     for (size_t k = 0; k < clients_.size(); ++k) {
@@ -338,10 +381,12 @@ void HostSession::broadcast(Game& g, bool force) {
 
 // ====================================================================== client
 
-bool ClientSession::connect(const std::string& host, int port, std::string* err) {
+bool ClientSession::connect(const std::string& host, int port, const std::string& name, std::string* err) {
     close();
     reason_.clear();
     toasts_.clear();
+    names_.clear();
+    name_ = cleanPlayerName(name);
     if (!conn_.connectTo(host, port, err)) return false;
     state_ = CONNECTING;
     helloSent_ = false;
@@ -381,6 +426,7 @@ bool ClientSession::pump(Game& g, const std::string& mapsDir) {
         Writer w;
         w.u32(kProtocolMagic);
         w.u16(kProtocolVersion);
+        w.str(name_);
         conn_.send(MSG_HELLO, w.b);
         conn_.pump();
         helloSent_ = true;
@@ -395,6 +441,11 @@ bool ClientSession::pump(Game& g, const std::string& mapsDir) {
                 slot_ = r.u8();
                 count_ = r.u8();
                 info_ = r.str();
+                {
+                    unsigned n = r.u8();
+                    names_.clear();
+                    for (unsigned i = 0; i < n && r.ok && i < 16; ++i) names_.push_back(r.str());
+                }
                 break;
             case MSG_START: {
                 int id = r.u8();

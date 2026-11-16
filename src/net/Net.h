@@ -35,6 +35,9 @@ public:
     // Takes the next complete message, if any.
     bool next(uint8_t& type, std::vector<uint8_t>& payload);
     size_t pendingOut() const { return out_.size(); }
+    // Unframed access (used for the one plain HTTP request below).
+    void sendRaw(const std::string& bytes);
+    std::string takeRaw();
 
 private:
     Conn(const Conn&);
@@ -57,6 +60,29 @@ public:
 
 private:
     int fd_ = -1;
+};
+
+// Finds this device's public IP address by asking a "what is my IP" web
+// service over plain HTTP (tries a few in turn). Only used when the player
+// opens a multiplayer lobby as host. Non-blocking: call pump() every frame.
+class PublicIp {
+public:
+    void start();
+    void pump();
+    bool busy() const { return state_ == 1; }
+    bool failed() const { return state_ == 3; }
+    const std::string& ip() const { return ip_; }  // empty until found
+    // Extracts an IPv4 address from an HTTP response ("" if there is none).
+    static std::string parse(const std::string& response);
+
+private:
+    Conn conn_;
+    int state_ = 0;  // 0 idle, 1 busy, 2 found, 3 failed
+    int attempt_ = -1;
+    bool sent_ = false;
+    unsigned startMs_ = 0;
+    std::string buf_, ip_;
+    void tryNext();
 };
 
 // ---- message building / parsing ----

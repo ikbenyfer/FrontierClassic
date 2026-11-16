@@ -58,6 +58,7 @@ void App::saveSettings() {
     j.set("attackIdx", attackIdx_);
     j.set("music", musicOn_);
     j.set("joinIp", joinIp_);
+    j.set("name", playerName_);
     j.set("port", portText_);
     writeFileAtomic(saveDir_ + "settings.json", j.dump());
 }
@@ -70,6 +71,7 @@ void App::loadSettings() {
         attackIdx_ = std::max(0, std::min(4, j["attackIdx"].i(1)));
         musicOn_ = j["music"].boolean(true);
         joinIp_ = j["joinIp"].str("");
+        playerName_ = cleanPlayerName(j["name"].str("Speler"));
         portText_ = j["port"].str("47800");
         if (joinIp_.size() > 15) joinIp_.clear();
         if (portText_.size() > 5) portText_ = "47800";
@@ -354,7 +356,10 @@ void App::showToast(const std::string& s) {
 void App::update(double dt) {
     // ---- multiplayer plumbing
     if (netMode_ == NET_HOST) {
-        if (screen == SCR_LOBBY) host_.pumpLobby(lobbyInfo());
+        if (screen == SCR_LOBBY) {
+            host_.pumpLobby(lobbyInfo(), playerName_);
+            publicIp_.pump();
+        }
         else if (screen == SCR_GAME) host_.pumpGame(game);
     } else if (netMode_ == NET_CLIENT) {
         if (client_.pump(game, mapsDir_)) enterGameScreen();
@@ -442,6 +447,7 @@ bool App::hostLobby(int port, std::string* err) {
     if (!host_.start(port, err)) return false;
     netMode_ = NET_HOST;
     screen = SCR_LOBBY;
+    if (lookupPublicIp) publicIp_.start();
     return true;
 }
 
@@ -455,14 +461,14 @@ bool App::hostStart() {
         showToast(err);
         return false;
     }
-    host_.startGame(game);
+    host_.startGame(game, playerName_);
     enterGameScreen();
     return true;
 }
 
 bool App::joinGame(const std::string& ip, int port, std::string* err) {
     leaveMultiplayer();
-    if (!client_.connect(ip, port, err)) return false;
+    if (!client_.connect(ip, port, playerName_, err)) return false;
     netMode_ = NET_CLIENT;
     screen = SCR_LOBBY;
     return true;
@@ -530,6 +536,16 @@ void App::actRecruit() {
 }
 
 void App::typeChar(char c) {
+    if (screen == SCR_NAME) {
+        if (c == '\b') {
+            if (!playerName_.empty()) playerName_.erase(playerName_.size() - 1);
+        } else if (playerName_.size() < kMaxNameLength &&
+                   ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-' ||
+                    (c == ' ' && !playerName_.empty()))) {
+            playerName_ += c;
+        }
+        return;
+    }
     if (screen != SCR_JOIN && screen != SCR_MP) return;
     std::string& target = (screen == SCR_JOIN && field_ == 0) ? joinIp_ : portText_;
     bool ip = &target == &joinIp_;
@@ -558,21 +574,22 @@ void App::keypad(float x, float y, std::string& target, size_t maxLen, bool dot)
 void App::renderMP() {
     gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
     gfx.text(W_ * 0.5f, 24, "Multiplayer", 40, C_TEXT, 1);
-    gfx.text(W_ * 0.5f, 84, "Speel samen via internet: iPad en Windows door elkaar, tot 8 spelers.", 20, C_DIM, 1);
+    gfx.text(W_ * 0.5f, 78, "Speel samen via internet: iPad en Windows door elkaar, tot 8 spelers.", 20, C_DIM, 1);
 
-    float x = 70, y = 150;
+    float x = 70, y = 196;
+    if (button(x, 112, 420, 60, "Jouw naam: " + playerName_, false, true, "tik om te wijzigen")) screen = SCR_NAME;
     gfx.text(x, y, "Spel hosten", 24, C_ACCENT);
     gfx.text(x, y + 34, "Jij start het spel. Stuur in je router de TCP-poort", 18, C_TEXT);
     gfx.text(x, y + 58, "hiernaast door naar dit apparaat (port forwarding) en", 18, C_TEXT);
-    gfx.text(x, y + 82, "geef je publieke IP-adres + poort aan je medespelers.", 18, C_TEXT);
-    if (button(x, y + 122, 420, 70, "Spel hosten", true)) {
+    gfx.text(x, y + 82, "geef het IP-adres + de poort uit de lobby aan je medespelers.", 18, C_TEXT);
+    if (button(x, y + 118, 420, 66, "Spel hosten", true)) {
         mpSetup_ = true;
         screen = SCR_NEW;
     }
-    y += 250;
+    y += 216;
     gfx.text(x, y, "Meedoen", 24, C_ACCENT);
     gfx.text(x, y + 34, "Vul het IP-adres en de poort van de host in.", 18, C_TEXT);
-    if (button(x, y + 74, 420, 70, "Meedoen met een spel", true)) {
+    if (button(x, y + 68, 420, 66, "Meedoen met een spel", true)) {
         field_ = 0;
         screen = SCR_JOIN;
     }
@@ -610,28 +627,49 @@ void App::renderJoin() {
     if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MP;
 }
 
+void App::playerList(float x, float y, const std::vector<std::string>& names, int self) {
+    char buf[64];
+    snprintf(buf, sizeof buf, "Spelers in de lobby: %d", (int)names.size());
+    gfx.text(x, y, buf, 24, C_GOOD);
+    for (size_t k = 0; k < names.size() && k < 8; ++k) {
+        float px = x + (k % 2) * 300.0f, py = y + 38 + (k / 2) * 34.0f;
+        snprintf(buf, sizeof buf, "%d.", (int)k + 1);
+        gfx.text(px, py, buf, 20, C_DIM);
+        gfx.text(px + 30, py, names[k] + (k == 0 ? "  (host)" : ""), 20, (int)k == self ? C_ACCENT : C_TEXT);
+    }
+}
+
 void App::renderLobby() {
     gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
     char buf[200];
     if (netMode_ == NET_HOST) {
-        gfx.text(W_ * 0.5f, 24, "Lobby - jij bent de host", 40, C_TEXT, 1);
-        gfx.text(W_ * 0.5f, 86, lobbyInfo(), 20, C_DIM, 1);
-        float x = 110, y = 150;
-        snprintf(buf, sizeof buf, "Poort: %d (TCP)", host_.port());
-        gfx.text(x, y, buf, 30, C_ACCENT);
-        gfx.text(x, y + 50, "Zo kunnen anderen meedoen:", 20, C_TEXT);
-        gfx.text(x, y + 80, "1. Stuur deze poort in je router door naar dit apparaat (port forwarding).", 18, C_TEXT);
-        gfx.text(x, y + 106, "2. Geef je publieke IP-adres (zoek op: wat is mijn ip) en de poort door.", 18, C_TEXT);
-        gfx.text(x, y + 132, "3. Zij kiezen Multiplayer > Meedoen en vullen die twee in.", 18, C_TEXT);
+        gfx.text(W_ * 0.5f, 20, "Lobby - jij bent de host", 40, C_TEXT, 1);
+        gfx.text(W_ * 0.5f, 78, lobbyInfo(), 20, C_DIM, 1);
+
+        // the two things the others need
+        float bx = 110, by = 118, bw = W_ - 220.0f;
+        gfx.rect(bx, by, bw, 150, 0x16233AFF);
+        gfx.frame(bx, by, bw, 150, 2, C_BTN_SEL);
+        gfx.text(bx + 24, by + 12, "Geef dit door aan je medespelers:", 18, C_DIM);
+        gfx.text(bx + 24, by + 44, "IP-adres", 18, C_DIM);
+        if (!publicIp_.ip().empty()) gfx.text(bx + 24, by + 68, publicIp_.ip(), 52, C_ACCENT);
+        else if (publicIp_.busy()) gfx.text(bx + 24, by + 80, "zoeken...", 30, C_DIM);
+        else gfx.text(bx + 24, by + 80, lookupPublicIp ? "niet gevonden (geen internet?)" : "(opzoeken staat uit)", 26, C_BAD);
+        gfx.text(bx + bw - 250, by + 44, "Poort", 18, C_DIM);
+        snprintf(buf, sizeof buf, "%d", host_.port());
+        gfx.text(bx + bw - 250, by + 68, buf, 52, C_ACCENT);
+
+        float x = 110, y = 286;
+        snprintf(buf, sizeof buf, "Stuur in je router TCP-poort %d door naar dit apparaat (port forwarding), anders kan", host_.port());
+        gfx.text(x, y, buf, 17, C_TEXT);
         std::vector<std::string> ips = netLocalAddresses();
         std::string local;
-        for (size_t k = 0; k < ips.size() && k < 4; ++k) local += (k ? ",  " : "") + ips[k];
-        gfx.text(x, y + 176, "Adres van dit apparaat in je eigen netwerk (voor de router of thuis):", 16, C_DIM);
-        gfx.text(x, y + 200, local.empty() ? "(geen netwerk gevonden)" : local, 22, C_TEXT);
+        for (size_t k = 0; k < ips.size() && k < 3; ++k) local += (k ? ", " : "") + ips[k];
+        gfx.text(x, y + 24, "niemand van buiten verbinden. Dit apparaat in je eigen netwerk: " + (local.empty() ? std::string("onbekend") : local), 17, C_TEXT);
+        gfx.text(x, y + 48, "Spelers op hetzelfde wifi-netwerk vullen dat lokale adres in.", 17, C_DIM);
 
-        snprintf(buf, sizeof buf, "Spelers in de lobby: %d", 1 + host_.clientCount());
-        gfx.text(x, y + 260, buf, 30, C_GOOD);
-        gfx.text(x, y + 300, "Jij + iedereen die verbonden is. Lege plekken worden AI.", 18, C_DIM);
+        playerList(x, y + 96, host_.lobbyNames(playerName_), 0);
+        gfx.text(x, H_ - 128.0f, "Lege plekken worden AI.", 17, C_DIM);
 
         if (button(W_ - 380.0f, H_ - 90.0f, 340, 66, "Start spel", true)) hostStart();
         if (button(40, H_ - 90.0f, 220, 66, "Annuleren")) {
@@ -639,23 +677,56 @@ void App::renderLobby() {
             screen = SCR_MP;
         }
     } else {
-        gfx.text(W_ * 0.5f, 24, "Lobby", 40, C_TEXT, 1);
+        gfx.text(W_ * 0.5f, 20, "Lobby", 40, C_TEXT, 1);
         snprintf(buf, sizeof buf, "%s : %d", joinIp_.c_str(), portNumber());
-        gfx.text(W_ * 0.5f, 110, buf, 24, C_DIM, 1);
+        gfx.text(W_ * 0.5f, 84, buf, 24, C_DIM, 1);
         if (client_.state() == ClientSession::CONNECTING || client_.lobbyCount() == 0) {
             gfx.text(W_ * 0.5f, 260, "Verbinden met de host...", 30, C_ACCENT, 1);
             gfx.text(W_ * 0.5f, 310, "Lukt het niet? Controleer IP, poort en de port forwarding bij de host.", 18, C_DIM, 1);
         } else {
-            gfx.text(W_ * 0.5f, 240, "Verbonden!", 36, C_GOOD, 1);
-            snprintf(buf, sizeof buf, "Jij bent speler %d van %d", client_.lobbySlot(), client_.lobbyCount());
-            gfx.text(W_ * 0.5f, 300, buf, 26, C_TEXT, 1);
-            gfx.text(W_ * 0.5f, 350, client_.lobbyInfo(), 20, C_DIM, 1);
-            gfx.text(W_ * 0.5f, 400, "Wachten tot de host het spel start...", 22, C_ACCENT, 1);
+            gfx.text(W_ * 0.5f, 150, "Verbonden!", 36, C_GOOD, 1);
+            gfx.text(W_ * 0.5f, 204, client_.lobbyInfo(), 20, C_DIM, 1);
+            playerList(210, 270, client_.lobbyNames(), client_.lobbySlot() - 1);
+            gfx.text(W_ * 0.5f, 470, "Wachten tot de host het spel start...", 22, C_ACCENT, 1);
         }
         if (button(40, H_ - 90.0f, 220, 66, "Verlaten")) {
             leaveMultiplayer();
             screen = SCR_JOIN;
         }
+    }
+}
+
+void App::renderName() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 24, "Jouw naam", 40, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, 84, "Zo zien anderen je in de lobby en op de kaart (max 12 tekens).", 20, C_DIM, 1);
+    float fw = 520, fx = (W_ - fw) * 0.5f;
+    gfx.rect(fx, 130, fw, 70, 0x1B2638FF);
+    gfx.frame(fx, 130, fw, 70, 2, C_BTN_SEL);
+    bool blink = (SDL_GetTicks() / 500) % 2 == 0;
+    gfx.text(W_ * 0.5f, 146, playerName_ + (blink && playerName_.size() < kMaxNameLength ? "_" : " "), 36, C_TEXT, 1);
+
+    static const char* rows[4] = {"1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"};
+    const float kw = 84, kh = 68, gap = 8;
+    for (int r = 0; r < 4; ++r) {
+        int n = (int)strlen(rows[r]);
+        float x0 = (W_ - (n * (kw + gap) - gap)) * 0.5f, y = 232 + r * (kh + gap);
+        for (int k = 0; k < n; ++k) {
+            char c = rows[r][k];
+            // first letter of a word is a capital, the rest small
+            bool upper = playerName_.empty() || playerName_[playerName_.size() - 1] == ' ';
+            char typed = (c >= 'A' && c <= 'Z' && !upper) ? (char)(c - 'A' + 'a') : c;
+            char label[2] = {typed, 0};
+            if (button(x0 + k * (kw + gap), y, kw, kh, label)) typeChar(typed);
+        }
+    }
+    float y = 232 + 4 * (kh + gap);
+    if (button(W_ * 0.5f - 330, y, 320, kh, "Spatie")) typeChar(' ');
+    if (button(W_ * 0.5f + 10, y, 320, kh, "Wis")) typeChar('\b');
+    if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Klaar", true)) {
+        playerName_ = cleanPlayerName(playerName_);
+        saveSettings();
+        screen = SCR_MP;
     }
 }
 
@@ -677,6 +748,7 @@ void App::render(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
         case SCR_MP: renderMP(); break;
         case SCR_JOIN: renderJoin(); break;
         case SCR_LOBBY: renderLobby(); break;
+        case SCR_NAME: renderName(); break;
     }
     if (!toast_.empty() && SDL_GetTicks() < toastUntil_) {
         float w = gfx.textWidth(toast_, 20) + 40;

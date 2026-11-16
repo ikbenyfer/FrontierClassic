@@ -151,6 +151,10 @@ static int spawnNear(Game& g, const char* nation) {
 
 static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& dir) {
     const int port = 47955;
+    app.lookupPublicIp = false;  // automated run: no calls to outside services
+    app.setPlayerName("Yfer");
+    app.screen = SCR_NAME;
+    shot(app, win, dir + "/15b_name.bmp");
     app.screen = SCR_MP;
     shot(app, win, dir + "/15_multiplayer.bmp");
     app.screen = SCR_JOIN;
@@ -167,11 +171,11 @@ static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& di
     ClientSession cl;
     Game cg;
     std::string mapsDir = resourceDir() + "maps";
-    if (!cl.connect("127.0.0.1", port, &err)) {
+    if (!cl.connect("127.0.0.1", port, "Sanne", &err)) {
         printf("MP: connect failed: %s\n", err.c_str());
         return;
     }
-    for (int k = 0; k < 400 && !(cl.state() == ClientSession::LOBBY && cl.lobbyCount() == 2); ++k) {
+    for (int k = 0; k < 400 && !(cl.state() == ClientSession::LOBBY && cl.lobbyNames().size() == 2); ++k) {
         app.update(0);
         cl.pump(cg, mapsDir);
         SDL_Delay(5);
