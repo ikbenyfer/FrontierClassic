@@ -1,4 +1,5 @@
 #include "App.h"
+#include "Music.h"
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
@@ -37,6 +38,7 @@ bool App::init(const std::string& resDir, const std::string& saveDir, std::strin
         return false;
     }
     loadSettings();
+    fc_music_load((resDir + "music/holding_the_ridge.mp3").c_str());
     // write test: can we save in the save folder?
     std::string probe = saveDir_ + "write_test.tmp";
     saveOk_ = writeFileAtomic(probe, "ok");
@@ -52,6 +54,7 @@ void App::saveSettings() {
     JVal j = JVal::object();
     j.set("newGame", newSettings.toJson());
     j.set("attackIdx", attackIdx_);
+    j.set("music", musicOn_);
     writeFileAtomic(saveDir_ + "settings.json", j.dump());
 }
 
@@ -61,6 +64,7 @@ void App::loadSettings() {
     if (readFile(saveDir_ + "settings.json", text) && JVal::parse(text, j)) {
         newSettings.fromJson(j["newGame"]);
         attackIdx_ = std::max(0, std::min(4, j["attackIdx"].i(1)));
+        musicOn_ = j["music"].boolean(true);
     }
     bool found = false;
     for (size_t k = 0; k < maps_.size(); ++k)
@@ -374,6 +378,8 @@ void App::render(int winW, int winH, int drawW, int drawH) {
         gfx.text(W_ * 0.5f, y + 9, toast_, 20, C_TEXT, 1);
     }
     gfx.endFrame();
+    // the song plays while a game is open (also when paused), not in the menus
+    fc_music_set_playing(screen == SCR_GAME && musicOn_ ? 1 : 0);
     tapPending_ = false;  // a tap nobody used is dropped
     blocksPrev_.swap(blocks_);
 }
@@ -531,7 +537,7 @@ void App::renderInfo() {
         "Slepen met 1 vinger verschuift de kaart, knijpen zoomt.",
         "",
         "Troepen groeien vanzelf; meer land = snellere groei.",
-        "Stad: meer troepen.  Markt: meer goud.  Mijn: grondstoffen.",
+        "Stad: meer troepen.  Markt: meer goud.  Mijn: grondstoffen (overal te bouwen).",
         "Fort: sterke verdediging in de buurt.  Tik op een gebouw om te verbeteren.",
         "Rekruteren: 1000 goud voor 1500 extra troepen.",
         "",
@@ -539,7 +545,7 @@ void App::renderInfo() {
         "Dit spel gebruikt geen internet, geen account en geen advertenties.",
         "",
         "Kaarten: Natural Earth (publiek domein). Lettertype: Aileron (CC0).",
-        "Gebouwd met SDL2 (zlib-licentie) en OpenGL ES 2.0.",
+        "Gebouwd met SDL2 (zlib-licentie) en OpenGL ES 2.0. Muziek: Holding The Ridge.",
     };
     float y = 100;
     for (size_t k = 0; k < sizeof lines / sizeof lines[0]; ++k) {
@@ -738,7 +744,7 @@ void App::renderHUD() {
             buildMode_ = buildMode_ == b ? -1 : b;
             selBuildingTile_ = -1;
             if (buildMode_ >= 0)
-                showToast(b == B_MINE ? "Tik op heuvels of bergen in je land" : "Tik op je eigen land om te bouwen");
+                showToast("Tik op je eigen land om te bouwen");
         }
     }
     std::string why;
@@ -832,11 +838,16 @@ void App::handleMapTap(float x, float y) {
 void App::renderPause() {
     gfx.rect(0, 0, (float)W_, (float)H_, 0x000000A0);
     block(0, 0, (float)W_, (float)H_);
-    float w = 460, h = 560, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
+    float w = 460, h = 636, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
     panel(x, y, w, h);
     gfx.text(W_ * 0.5f, y + 18, "Gepauzeerd", 32, C_TEXT, 1);
     float bx = x + 40, bw = w - 80, cy = y + 76;
     if (button(bx, cy, bw, 60, "Verder spelen", true)) overlay = OV_NONE;
+    cy += 76;
+    if (button(bx, cy, bw, 60, musicOn_ ? "Muziek: aan" : "Muziek: uit", musicOn_)) {
+        musicOn_ = !musicOn_;
+        saveSettings();
+    }
     cy += 76;
     gfx.text(bx, cy, "Opslaan in:", 18, C_DIM);
     cy += 26;

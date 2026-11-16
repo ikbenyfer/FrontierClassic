@@ -50,8 +50,8 @@ SDL_SRC := $(wildcard $(SDL_DIR)/src/*.c) \
 	$(wildcard $(SDL_DIR)/src/video/uikit/*.m)
 SDL_SRC := $(filter-out %SDL_uikitmetalview.m %SDL_uikitvulkan.m,$(SDL_SRC))
 
-FrontierClassic_FILES = $(wildcard src/core/*.cpp) $(wildcard src/app/*.cpp) ios/ios_shims.m $(SDL_SRC)
-FrontierClassic_FRAMEWORKS = UIKit Foundation CoreFoundation CoreGraphics QuartzCore OpenGLES
+FrontierClassic_FILES = $(wildcard src/core/*.cpp) $(wildcard src/app/*.cpp) ios/ios_shims.m ios/music.m $(SDL_SRC)
+FrontierClassic_FRAMEWORKS = UIKit Foundation CoreFoundation CoreGraphics QuartzCore OpenGLES AVFoundation
 FrontierClassic_WEAK_FRAMEWORKS = GameController
 FrontierClassic_CFLAGS = -O2 -I$(SDL_DIR)/include -DGLES_SILENCE_DEPRECATION -Wno-error -Wno-deprecated-declarations -Wno-unused-parameter
 FrontierClassic_CCFLAGS = -std=c++11

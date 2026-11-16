@@ -14,7 +14,7 @@ The CI build checks that the binary contains no network frameworks or network fu
 | Maps | World Map, Europe, Asia, North America, South America, Africa. Real country shapes (Natural Earth, public domain), terrain (plains, hills, mountains, desert, tundra), faint country borders. AI nations start in their own country. |
 | Armies | Troops grow automatically (more land and cities = faster). Tap an area: your troops attack along the whole border. Across the sea a ship sails out (animated). The buttons 10–100% set how many troops you send. Two armies attacking each other meet in the middle. |
 | Combat | Cost per tile depends on terrain (mountains 2.4×), the defender's troop density and forts nearby. |
-| Economy | Gold (land + markets) and resources (land + mines). Buildings: City, Market, Mine, Fort, each upgradable to level 3. Recruiting: 1000 gold → 1500 troops. |
+| Economy | Gold (land + markets) and resources (land + mines; mines can be built anywhere on your land). Buildings: City, Market, Mine, Fort, each upgradable to level 3. Recruiting: 1000 gold → 1500 troops. |
 | AI | 10–50 opponents at 3 levels. They expand, build, upgrade, attack the weakest neighbour, strike back at whoever attacks them (including you) and use ships when they are boxed in. |
 | Modes | Free For All, Teams (2–4), Conquest (last one standing), Sandbox (plenty of gold, AI can be peaceful), Custom Game (teams, starting gold, win %, troop growth). |
 | Controls | Drag = move, pinch = zoom, tap = attack / build / select. Big buttons, landscape only. |

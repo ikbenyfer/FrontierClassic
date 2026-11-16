@@ -66,6 +66,7 @@ private:
     bool gameOverSeen_ = false;
     bool uiLocked_ = false;
     bool saveOk_ = false;
+    bool musicOn_ = true;
     std::string toast_;
     Uint32 toastUntil_ = 0;
     Uint32 lastAutosave_ = 0;

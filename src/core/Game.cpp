@@ -541,10 +541,6 @@ bool Game::canBuildHere(int p, int type, int tile, std::string* why) const {
         if (why) *why = "Je kunt alleen op je eigen land bouwen";
         return false;
     }
-    if (type == B_MINE && map.terrain(tile) != T_HILLS && map.terrain(tile) != T_MOUNTAINS) {
-        if (why) *why = "Een mijn moet op heuvels of bergen";
-        return false;
-    }
     int x = tile % map.w, y = tile / map.w;
     for (size_t k = 0; k < buildings.size(); ++k) {
         int bx = buildings[k].tile % map.w, by = buildings[k].tile / map.w;
