@@ -122,12 +122,52 @@ static void runGame(const std::string& mapsDir, const std::string& mapId, int mo
            owned * 100 / std::max(1, g.map.landTiles), buildingsSeen, maxBoats, (int)g.over, sum.c_str());
 }
 
+static void testCheats(const std::string& mapsDir) {
+    Settings s;
+    s.mapId = "netherlands";
+    s.numAI = 40;
+    s.difficulty = DIFF_HARD;
+    s.cheatTroops = s.cheatGold = s.cheatMaterials = s.cheatGod = s.cheatFast = true;
+    Game g;
+    std::string err;
+    CHECK(g.newGame(s, mapsDir, &err), err.c_str());
+    int spawn = -1;
+    for (int t = (int)g.owner.size() / 2; t < (int)g.owner.size() && spawn < 0; ++t)
+        if (g.canSpawnAt(t)) spawn = t;
+    CHECK(g.spawnHuman(spawn), "cheat game spawn");
+    int lost = 0, prev = g.players[1].tiles;
+    for (int k = 0; k < 1200; ++k) {
+        if (k % 20 == 0) g.orderAttack(1, rand() % (int)g.owner.size(), g.players[1].troops * 0.25, 0);
+        g.step();
+        g.changed.clear();
+        if (g.players[1].tiles < prev) ++lost;
+        prev = g.players[1].tiles;
+    }
+    const Player& me = g.players[1];
+    CHECK(me.troops >= 9000000 && me.gold >= 90000000 && me.materials >= 90000000, "cheats: infinite troops/gold/materials");
+    CHECK(lost == 0 && me.alive, "cheats: nobody takes your land");
+    printf("  cheats on netherlands: you own %d%% of the land after 2 minutes, never lost a tile\n",
+           me.tiles * 100 / std::max(1, g.map.landTiles));
+    // a multiplayer game ignores cheats
+    Settings m = s;
+    m.numHumans = 2;
+    Game g2;
+    CHECK(g2.newGame(m, mapsDir, &err), err.c_str());
+    CHECK(!g2.cheatsFor(1) && !g2.cheatsFor(2), "cheats are off in multiplayer");
+    // blocked land (other countries) can never be owned
+    int blockedOwned = 0, blocked = 0;
+    for (size_t t = 0; t < g.owner.size(); ++t)
+        if ((g.map.tiles[t] & 15) == T_BLOCKED) { ++blocked; blockedOwned += g.owner[t] != 0; }
+    CHECK(blocked > 0 && blockedOwned == 0, "grey neighbour countries stay empty");
+}
+
 int main(int argc, char** argv) {
     std::string mapsDir = argc > 1 ? argv[1] : "Resources/maps";
     int ticks = argc > 2 ? atoi(argv[2]) : 3000;
     testJson();
     std::vector<MapEntry> maps;
-    CHECK(loadMapIndex(mapsDir, maps) && maps.size() == 6, "map index has 6 maps");
+    CHECK(loadMapIndex(mapsDir, maps) && maps.size() >= 12, "map index has all maps");
+    testCheats(mapsDir);
     for (size_t m = 0; m < maps.size(); ++m)
         for (int mode = 0; mode < MODE_COUNT; ++mode)
             runGame(mapsDir, maps[m].id, mode, mode == MODE_SANDBOX ? 10 : 50, mode == 0 ? ticks : ticks / 3);

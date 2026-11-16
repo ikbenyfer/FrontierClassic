@@ -504,6 +504,7 @@ bool App::hostStart() {
     if (netMode_ != NET_HOST) return false;
     Settings st = newSettings;
     st.numHumans = 1 + host_.clientCount();
+    st.cheatTroops = st.cheatGold = st.cheatMaterials = st.cheatGod = st.cheatFast = false;
     st.seed = (unsigned)SDL_GetTicks() * 2654435761u + 17u;
     std::string err;
     if (!game.newGame(st, mapsDir_, &err)) {
@@ -867,6 +868,56 @@ void App::renderName() {
     }
 }
 
+void App::renderCheats() {
+    // from the pause menu the cheats change the running game, else the next new game
+    const bool inGame = cheatsReturn_ == SCR_GAME && game.map.w;
+    Settings& s = inGame ? game.settings : newSettings;
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 24, "Cheats", 40, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, 84, inGame ? "Voor dit spel. Alleen in singleplayer." : "Voor je volgende spel. Alleen in singleplayer.", 20,
+             C_DIM, 1);
+    struct Row {
+        bool* v;
+        const char* name;
+        const char* help;
+    } rows[5] = {
+        {&s.cheatTroops, "Oneindig troepen", "Je leger is altijd vol (10 miljoen)."},
+        {&s.cheatGold, "Oneindig goud", "Bouwen, verbeteren en rekruteren kost niets meer."},
+        {&s.cheatMaterials, "Oneindig grondstoffen", "Genoeg grondstoffen voor alle forten en verbeteringen."},
+        {&s.cheatGod, "Onverwoestbaar", "Niemand kan jouw land veroveren."},
+        {&s.cheatFast, "Snel veroveren", "Je aanvallen nemen veel meer land per seconde."},
+    };
+    float x = 150, y = 140;
+    for (int k = 0; k < 5; ++k) {
+        if (button(x, y, 200, 66, *rows[k].v ? "AAN" : "uit", *rows[k].v)) {
+            *rows[k].v = !*rows[k].v;
+            if (inGame) {  // keep the setting for the next game too
+                newSettings.cheatTroops = s.cheatTroops;
+                newSettings.cheatGold = s.cheatGold;
+                newSettings.cheatMaterials = s.cheatMaterials;
+                newSettings.cheatGod = s.cheatGod;
+                newSettings.cheatFast = s.cheatFast;
+            }
+            saveSettings();
+        }
+        gfx.text(x + 230, y + 8, rows[k].name, 26, C_TEXT);
+        gfx.text(x + 230, y + 40, rows[k].help, 17, C_DIM);
+        y += 86;
+    }
+    if (button(W_ * 0.5f - 160, y + 4, 320, 56, "Alles uit")) {
+        for (int k = 0; k < 5; ++k) *rows[k].v = false;
+        if (inGame) {
+            newSettings.cheatTroops = newSettings.cheatGold = newSettings.cheatMaterials = false;
+            newSettings.cheatGod = newSettings.cheatFast = false;
+        }
+        saveSettings();
+    }
+    if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, inGame ? "Terug naar spel" : "Klaar", true)) {
+        screen = cheatsReturn_;
+        if (inGame) overlay = OV_NONE;
+    }
+}
+
 // ------------------------------------------------------------------ render
 
 void App::render(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
@@ -886,6 +937,7 @@ void App::render(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
         case SCR_JOIN: renderJoin(); break;
         case SCR_LOBBY: renderLobby(); break;
         case SCR_NAME: renderName(); break;
+        case SCR_CHEATS: renderCheats(); break;
     }
     if (!toast_.empty() && SDL_GetTicks() < toastUntil_) {
         float w = gfx.textWidth(toast_, 20) + 40;
@@ -949,9 +1001,9 @@ void App::renderNew() {
     y += 32;
     for (size_t k = 0; k < maps_.size(); ++k) {
         float bx = x0 + (k % 3) * 318, by = y + (k / 3) * 62;
-        if (button(bx, by, 306, 54, maps_[k].name, maps_[k].id == s.mapId)) s.mapId = maps_[k].id;
+        if (button(bx, by, 232, 46, maps_[k].name, maps_[k].id == s.mapId)) s.mapId = maps_[k].id;
     }
-    y += 2 * 62 + 14;
+    y += (float)((maps_.size() + 3) / 4) * 52 + 10;
 
     gfx.text(x0, y, "Spelmodus", 22, C_ACCENT);
     y += 32;
@@ -1024,6 +1076,10 @@ void App::renderNew() {
     }
 
     if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = mpSetup_ ? SCR_MP : SCR_MENU;
+    if (!mpSetup_ && button(300, H_ - 90.0f, 360, 66, s.anyCheat() ? "Cheats (aan)" : "Cheats", s.anyCheat())) {
+        cheatsReturn_ = SCR_NEW;
+        screen = SCR_CHEATS;
+    }
     if (mpSetup_) {
         if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Open lobby", true)) {
             saveSettings();
@@ -1031,6 +1087,7 @@ void App::renderNew() {
             if (!hostLobby(portNumber(), &err)) showToast(err);
         }
     } else if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Start", true)) {
+        s.numHumans = 1;
         saveSettings();
         startGame(s);
     }
@@ -1272,6 +1329,7 @@ void App::renderHUD() {
     snprintf(buf, sizeof buf, "%s / %s  (+%.0f/s)", formatNumber(me.troops).c_str(),
              formatNumber(game.maxTroops(game.humanId)).c_str(), game.troopGrowth(game.humanId));
     gfx.text(420, 4, "TROEPEN", 13, C_DIM);
+    if (netMode_ == NET_OFF && game.settings.anyCheat()) gfx.text(560, 4, "CHEATS AAN", 13, C_BAD);
     gfx.text(420, 20, buf, 20, C_TEXT);
     double pct = 100.0 * me.tiles / std::max(1, game.map.landTiles);
     snprintf(buf, sizeof buf, "%.1f%%  #%d/%d", pct, game.rankOf(game.humanId), (int)game.players.size() - 1);
@@ -1450,7 +1508,7 @@ void App::renderPause() {
     gfx.rect(0, 0, (float)W_, (float)H_, 0x000000A0);
     block(0, 0, (float)W_, (float)H_);
     const bool mp = netMode_ != NET_OFF;
-    float w = 460, h = mp ? 340.0f : 636.0f, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
+    float w = 460, h = mp ? 340.0f : 706.0f, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
     panel(x, y, w, h);
     gfx.text(W_ * 0.5f, y + 18, mp ? "Menu (spel loopt door)" : "Gepauzeerd", 32, C_TEXT, 1);
     float bx = x + 40, bw = w - 80, cy = y + 76;
@@ -1494,6 +1552,11 @@ void App::renderPause() {
         autosave();
         screen = SCR_MENU;
         overlay = OV_NONE;
+    }
+    cy += 76;
+    if (button(bx, cy, bw, 50, game.settings.anyCheat() ? "Cheats (aan)" : "Cheats", game.settings.anyCheat())) {
+        cheatsReturn_ = SCR_GAME;
+        screen = SCR_CHEATS;  // the game is paused while this screen is open
     }
 }
 

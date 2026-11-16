@@ -1,0 +1,360 @@
+{
+ "id": "scandinavia",
+ "name": "Scandinavia",
+ "width": 560,
+ "height": 740,
+ "file": "scandinavia.bin",
+ "landTiles": 177651,
+ "nations": [
+  {
+   "name": "Stockholm",
+   "x": 281,
+   "y": 525
+  },
+  {
+   "name": "Helsinki",
+   "x": 418,
+   "y": 489
+  },
+  {
+   "name": "Kobenhavn",
+   "x": 171,
+   "y": 688
+  },
+  {
+   "name": "Oslo",
+   "x": 134,
+   "y": 501
+  },
+  {
+   "name": "Goteborg",
+   "x": 160,
+   "y": 596
+  },
+  {
+   "name": "Malmo",
+   "x": 180,
+   "y": 692
+  },
+  {
+   "name": "Tampere",
+   "x": 395,
+   "y": 431
+  },
+  {
+   "name": "Aarhus",
+   "x": 124,
+   "y": 667
+  },
+  {
+   "name": "Bergen",
+   "x": 26,
+   "y": 480
+  },
+  {
+   "name": "Turku",
+   "x": 365,
+   "y": 477
+  },
+  {
+   "name": "Stavanger",
+   "x": 33,
+   "y": 543
+  },
+  {
+   "name": "Odense",
+   "x": 127,
+   "y": 700
+  },
+  {
+   "name": "Trondheim",
+   "x": 128,
+   "y": 347
+  },
+  {
+   "name": "Oulu",
+   "x": 429,
+   "y": 277
+  },
+  {
+   "name": "Uppsala",
+   "x": 272,
+   "y": 503
+  },
+  {
+   "name": "Aalborg",
+   "x": 118,
+   "y": 628
+  },
+  {
+   "name": "Baerum",
+   "x": 146,
+   "y": 501
+  },
+  {
+   "name": "Vasteraas",
+   "x": 250,
+   "y": 513
+  },
+  {
+   "name": "Lahti",
+   "x": 433,
+   "y": 453
+  },
+  {
+   "name": "Orebro",
+   "x": 224,
+   "y": 528
+  },
+  {
+   "name": "Jyvaskyla",
+   "x": 434,
+   "y": 398
+  },
+  {
+   "name": "Linkoping",
+   "x": 232,
+   "y": 567
+  },
+  {
+   "name": "Kuopio",
+   "x": 474,
+   "y": 367
+  },
+  {
+   "name": "Helsingborg",
+   "x": 174,
+   "y": 671
+  },
+  {
+   "name": "Drammen",
+   "x": 123,
+   "y": 508
+  },
+  {
+   "name": "Jonkoping",
+   "x": 202,
+   "y": 595
+  },
+  {
+   "name": "Norrkoping",
+   "x": 243,
+   "y": 559
+  },
+  {
+   "name": "Umea",
+   "x": 324,
+   "y": 329
+  },
+  {
+   "name": "Pori",
+   "x": 355,
+   "y": 432
+  },
+  {
+   "name": "Karlstad",
+   "x": 189,
+   "y": 524
+  },
+  {
+   "name": "Sundsvall",
+   "x": 266,
+   "y": 392
+  },
+  {
+   "name": "Skien",
+   "x": 112,
+   "y": 532
+  },
+  {
+   "name": "Esbjerg",
+   "x": 89,
+   "y": 697
+  },
+  {
+   "name": "Gavle",
+   "x": 263,
+   "y": 468
+  },
+  {
+   "name": "Boras",
+   "x": 178,
+   "y": 597
+  },
+  {
+   "name": "Kristiansand",
+   "x": 80,
+   "y": 578
+  },
+  {
+   "name": "Vaxjo",
+   "x": 216,
+   "y": 635
+  },
+  {
+   "name": "Lappeenranta",
+   "x": 483,
+   "y": 451
+  },
+  {
+   "name": "Vaasa",
+   "x": 352,
+   "y": 361
+  },
+  {
+   "name": "Halmstad",
+   "x": 177,
+   "y": 644
+  },
+  {
+   "name": "Joensuu",
+   "x": 515,
+   "y": 382
+  },
+  {
+   "name": "Tromso",
+   "x": 299,
+   "y": 73
+  },
+  {
+   "name": "Vejle",
+   "x": 110,
+   "y": 686
+  },
+  {
+   "name": "Lulea",
+   "x": 363,
+   "y": 251
+  },
+  {
+   "name": "Alesund",
+   "x": 47,
+   "y": 385
+  },
+  {
+   "name": "Hameenlinna",
+   "x": 409,
+   "y": 453
+  },
+  {
+   "name": "Kokkola",
+   "x": 382,
+   "y": 328
+  },
+  {
+   "name": "Mikkeli",
+   "x": 465,
+   "y": 422
+  },
+  {
+   "name": "Ostersund",
+   "x": 213,
+   "y": 357
+  },
+  {
+   "name": "Trollhattan",
+   "x": 165,
+   "y": 574
+  },
+  {
+   "name": "Roskilde",
+   "x": 161,
+   "y": 689
+  },
+  {
+   "name": "Haugesund",
+   "x": 25,
+   "y": 523
+  },
+  {
+   "name": "Borlange",
+   "x": 228,
+   "y": 476
+  },
+  {
+   "name": "Tonsberg",
+   "x": 128,
+   "y": 530
+  },
+  {
+   "name": "Moss",
+   "x": 133,
+   "y": 522
+  },
+  {
+   "name": "Falun",
+   "x": 232,
+   "y": 470
+  },
+  {
+   "name": "Karlskrona",
+   "x": 225,
+   "y": 664
+  },
+  {
+   "name": "Kalmar",
+   "x": 247,
+   "y": 644
+  },
+  {
+   "name": "Viborg",
+   "x": 107,
+   "y": 654
+  },
+  {
+   "name": "Rovaniemi",
+   "x": 434,
+   "y": 211
+  },
+  {
+   "name": "Bodo",
+   "x": 208,
+   "y": 177
+  },
+  {
+   "name": "Kristianstad",
+   "x": 202,
+   "y": 672
+  },
+  {
+   "name": "Skelleftea",
+   "x": 339,
+   "y": 287
+  },
+  {
+   "name": "Kouvola",
+   "x": 454,
+   "y": 459
+  },
+  {
+   "name": "Arendal",
+   "x": 95,
+   "y": 565
+  },
+  {
+   "name": "Hamar",
+   "x": 141,
+   "y": 461
+  },
+  {
+   "name": "Svendborg",
+   "x": 132,
+   "y": 714
+  },
+  {
+   "name": "Hillerod",
+   "x": 166,
+   "y": 676
+  },
+  {
+   "name": "Ornskoldsvik",
+   "x": 294,
+   "y": 351
+  },
+  {
+   "name": "Nykoping",
+   "x": 260,
+   "y": 552
+  }
+ ]
+}

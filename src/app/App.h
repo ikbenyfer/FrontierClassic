@@ -10,7 +10,7 @@
 
 namespace fc {
 
-enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY, SCR_NAME };
+enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY, SCR_NAME, SCR_CHEATS };
 enum NetMode { NET_OFF, NET_HOST, NET_CLIENT };
 enum Overlay { OV_NONE, OV_PAUSE, OV_GAMEOVER };
 
@@ -108,6 +108,8 @@ private:
     std::string& editString() { return editTarget_ == 1 ? serverAddr_ : (editTarget_ == 2 ? joinHost_ : playerName_); }
     bool serverAddress(std::string& host, int& port) const;
     void renderName();
+    void renderCheats();
+    Screen cheatsReturn_ = SCR_NEW;
     void playerList(float x, float y, const std::vector<std::string>& names, int self);
     int field_ = 0;                 // join screen: 0 = IP, 1 = port
     void enterGameScreen();

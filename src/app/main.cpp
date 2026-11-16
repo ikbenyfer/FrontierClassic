@@ -246,6 +246,10 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     shot(app, win, dir + "/02_new_game.bmp");
     app.screen = SCR_INFO;
     shot(app, win, dir + "/03_info.bmp");
+    app.newSettings.cheatTroops = app.newSettings.cheatGod = true;
+    app.screen = SCR_CHEATS;
+    shot(app, win, dir + "/03c_cheats.bmp");
+    app.newSettings.cheatTroops = app.newSettings.cheatGod = false;
 
     // a generated test flag (3 stripes + a diagonal band) to check flag rendering
     {
@@ -286,6 +290,21 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     if (app.loadSlot("slot1")) shot(app, win, dir + "/09_loaded.bmp");
 
     runMultiplayerShots(app, win, dir);
+
+    {   // the Netherlands, with cheats
+        Settings nl;
+        nl.mapId = "netherlands";
+        nl.numAI = 40;
+        nl.cheatTroops = nl.cheatGold = nl.cheatFast = true;
+        if (app.startGame(nl)) {
+            app.game.spawnHuman(spawnNear(app.game, "Utrecht"));
+            runTicks(app, 600);
+            app.fitMap();
+            shot(app, win, dir + "/19_netherlands_cheats.bmp");
+            app.focusOnHuman(3.0f);
+            shot(app, win, dir + "/20_netherlands_zoom.bmp");
+        }
+    }
 
     const char* maps[5] = {"europe", "asia", "northamerica", "southamerica", "africa"};
     const char* home[5] = {"France", "India", "Mexico", "Brazil", "Nigeria"};

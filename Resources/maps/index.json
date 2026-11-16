@@ -6,6 +6,11 @@
    "file": "world.json"
   },
   {
+   "id": "netherlands",
+   "name": "Nederland",
+   "file": "netherlands.json"
+  },
+  {
    "id": "europe",
    "name": "Europe",
    "file": "europe.json"
@@ -29,6 +34,31 @@
    "id": "africa",
    "name": "Africa",
    "file": "africa.json"
+  },
+  {
+   "id": "britishisles",
+   "name": "British Isles",
+   "file": "britishisles.json"
+  },
+  {
+   "id": "scandinavia",
+   "name": "Scandinavia",
+   "file": "scandinavia.json"
+  },
+  {
+   "id": "japan",
+   "name": "Japan",
+   "file": "japan.json"
+  },
+  {
+   "id": "middleeast",
+   "name": "Middle East",
+   "file": "middleeast.json"
+  },
+  {
+   "id": "oceania",
+   "name": "Oceania",
+   "file": "oceania.json"
   }
  ]
 }

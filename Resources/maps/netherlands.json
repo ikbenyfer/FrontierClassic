@@ -1,0 +1,360 @@
+{
+ "id": "netherlands",
+ "name": "Nederland",
+ "width": 630,
+ "height": 740,
+ "file": "netherlands.bin",
+ "landTiles": 174216,
+ "nations": [
+  {
+   "name": "Amsterdam",
+   "x": 261,
+   "y": 321
+  },
+  {
+   "name": "Rotterdam",
+   "x": 196,
+   "y": 433
+  },
+  {
+   "name": "Den Haag",
+   "x": 169,
+   "y": 393
+  },
+  {
+   "name": "Utrecht",
+   "x": 295,
+   "y": 391
+  },
+  {
+   "name": "Eindhoven",
+   "x": 348,
+   "y": 554
+  },
+  {
+   "name": "Groningen",
+   "x": 517,
+   "y": 107
+  },
+  {
+   "name": "Tilburg",
+   "x": 290,
+   "y": 524
+  },
+  {
+   "name": "Breda",
+   "x": 242,
+   "y": 516
+  },
+  {
+   "name": "Nijmegen",
+   "x": 408,
+   "y": 454
+  },
+  {
+   "name": "Enschede",
+   "x": 567,
+   "y": 358
+  },
+  {
+   "name": "Haarlem",
+   "x": 221,
+   "y": 318
+  },
+  {
+   "name": "Arnhem",
+   "x": 416,
+   "y": 418
+  },
+  {
+   "name": "Zaanstad",
+   "x": 250,
+   "y": 303
+  },
+  {
+   "name": "Amersfoort",
+   "x": 336,
+   "y": 373
+  },
+  {
+   "name": "Apeldoorn",
+   "x": 425,
+   "y": 361
+  },
+  {
+   "name": "'s-Hertogenbosch",
+   "x": 322,
+   "y": 491
+  },
+  {
+   "name": "Maastricht",
+   "x": 382,
+   "y": 702
+  },
+  {
+   "name": "Leiden",
+   "x": 198,
+   "y": 373
+  },
+  {
+   "name": "Dordrecht",
+   "x": 225,
+   "y": 461
+  },
+  {
+   "name": "Zoetermeer",
+   "x": 198,
+   "y": 398
+  },
+  {
+   "name": "Zwolle",
+   "x": 442,
+   "y": 283
+  },
+  {
+   "name": "Deventer",
+   "x": 454,
+   "y": 348
+  },
+  {
+   "name": "Delft",
+   "x": 178,
+   "y": 411
+  },
+  {
+   "name": "Alkmaar",
+   "x": 238,
+   "y": 255
+  },
+  {
+   "name": "Heerlen",
+   "x": 427,
+   "y": 692
+  },
+  {
+   "name": "Venlo",
+   "x": 456,
+   "y": 571
+  },
+  {
+   "name": "Leeuwarden",
+   "x": 399,
+   "y": 112
+  },
+  {
+   "name": "Hilversum",
+   "x": 304,
+   "y": 358
+  },
+  {
+   "name": "Hengelo",
+   "x": 551,
+   "y": 346
+  },
+  {
+   "name": "Roosendaal",
+   "x": 193,
+   "y": 531
+  },
+  {
+   "name": "Purmerend",
+   "x": 268,
+   "y": 288
+  },
+  {
+   "name": "Oss",
+   "x": 356,
+   "y": 471
+  },
+  {
+   "name": "Helmond",
+   "x": 378,
+   "y": 544
+  },
+  {
+   "name": "Almelo",
+   "x": 531,
+   "y": 323
+  },
+  {
+   "name": "Gouda",
+   "x": 232,
+   "y": 411
+  },
+  {
+   "name": "Hoorn",
+   "x": 285,
+   "y": 251
+  },
+  {
+   "name": "Ede",
+   "x": 379,
+   "y": 403
+  },
+  {
+   "name": "Bergen op Zoom",
+   "x": 167,
+   "y": 541
+  },
+  {
+   "name": "Assen",
+   "x": 516,
+   "y": 165
+  },
+  {
+   "name": "Emmen",
+   "x": 568,
+   "y": 215
+  },
+  {
+   "name": "Den Helder",
+   "x": 239,
+   "y": 173
+  },
+  {
+   "name": "Middelburg",
+   "x": 62,
+   "y": 539
+  },
+  {
+   "name": "Vlissingen",
+   "x": 56,
+   "y": 551
+  },
+  {
+   "name": "Terneuzen",
+   "x": 96,
+   "y": 579
+  },
+  {
+   "name": "Harderwijk",
+   "x": 371,
+   "y": 328
+  },
+  {
+   "name": "Kampen",
+   "x": 416,
+   "y": 273
+  },
+  {
+   "name": "Sneek",
+   "x": 378,
+   "y": 155
+  },
+  {
+   "name": "Drachten",
+   "x": 445,
+   "y": 135
+  },
+  {
+   "name": "Heerenveen",
+   "x": 417,
+   "y": 173
+  },
+  {
+   "name": "Doetinchem",
+   "x": 474,
+   "y": 421
+  },
+  {
+   "name": "Winterswijk",
+   "x": 540,
+   "y": 421
+  },
+  {
+   "name": "Roermond",
+   "x": 428,
+   "y": 617
+  },
+  {
+   "name": "Sittard",
+   "x": 409,
+   "y": 664
+  },
+  {
+   "name": "Weert",
+   "x": 385,
+   "y": 602
+  },
+  {
+   "name": "Goes",
+   "x": 106,
+   "y": 539
+  },
+  {
+   "name": "Den Burg",
+   "x": 245,
+   "y": 150
+  },
+  {
+   "name": "Meppel",
+   "x": 459,
+   "y": 238
+  },
+  {
+   "name": "Hardenberg",
+   "x": 525,
+   "y": 268
+  },
+  {
+   "name": "Tiel",
+   "x": 342,
+   "y": 441
+  },
+  {
+   "name": "Zutphen",
+   "x": 460,
+   "y": 378
+  },
+  {
+   "name": "Veenendaal",
+   "x": 362,
+   "y": 406
+  },
+  {
+   "name": "Gorinchem",
+   "x": 271,
+   "y": 456
+  },
+  {
+   "name": "Hoogeveen",
+   "x": 504,
+   "y": 233
+  },
+  {
+   "name": "Stadskanaal",
+   "x": 576,
+   "y": 165
+  },
+  {
+   "name": "Delfzijl",
+   "x": 571,
+   "y": 80
+  },
+  {
+   "name": "Harlingen",
+   "x": 341,
+   "y": 120
+  },
+  {
+   "name": "Enkhuizen",
+   "x": 320,
+   "y": 237
+  },
+  {
+   "name": "Schagen",
+   "x": 245,
+   "y": 215
+  },
+  {
+   "name": "Emmeloord",
+   "x": 391,
+   "y": 235
+  },
+  {
+   "name": "Zeist",
+   "x": 311,
+   "y": 391
+  }
+ ]
+}

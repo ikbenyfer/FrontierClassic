@@ -24,12 +24,13 @@ Singleplayer werkt volledig offline. Voor multiplayer: zie hieronder.
 
 | Part | Contents |
 |---|---|
-| Maps | World Map, Europe, Asia, North America, South America, Africa. Real country shapes (Natural Earth, public domain), terrain (plains, hills, mountains, desert, tundra), faint country borders. AI nations start in their own country. |
+| Maps | 12 maps: World Map, Nederland (with 70 Dutch cities as opponents), Europe, Asia, North America, South America, Africa, British Isles, Scandinavia, Japan, Middle East, Oceania. Neighbouring countries outside a map are grey and cannot be taken. Real country shapes (Natural Earth, public domain), terrain (plains, hills, mountains, desert, tundra), faint country borders. AI nations start in their own country. |
 | Armies | Troops grow automatically (more land and cities = faster). Tap an area: your troops attack along the whole border. Across the sea a ship sails out (animated). The buttons 10–100% set how many troops you send. Two armies attacking each other meet in the middle. |
 | Combat | Cost per tile depends on terrain (mountains 2.4×), the defender's troop density and forts nearby. |
 | Economy | Gold (land + markets) and resources (land + mines; mines can be built anywhere on your land). Buildings: City, Market, Mine, Fort, each upgradable to level 3. Recruiting: 1000 gold → 1500 troops. |
 | AI | 10–50 opponents at 3 levels. They expand, build, upgrade, attack the weakest neighbour, strike back at whoever attacks them (including you) and use ships when they are boxed in. |
 | Modes | Free For All, Teams (2–4), Conquest (last one standing), Sandbox (plenty of gold, AI can be peaceful), Custom Game (teams, starting gold, win %, troop growth). |
+| Cheats | Single player only (Nieuw spel > Cheats, or Menu > Cheats during a game): infinite troops, infinite gold, infinite resources, invincible, fast conquest. |
 | Controls | Drag = move, pinch = zoom, tap = attack / build / select. Big buttons, landscape only. |
 | Saving | Autosave every minute and when the app goes to the background, plus 3 slots. Plain JSON files in the app's `Documents` folder (also visible through iTunes file sharing). Your new-game settings are remembered. |
 

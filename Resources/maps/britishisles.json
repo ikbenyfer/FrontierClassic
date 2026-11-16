@@ -1,0 +1,360 @@
+{
+ "id": "britishisles",
+ "name": "British Isles",
+ "width": 500,
+ "height": 755,
+ "file": "britishisles.bin",
+ "landTiles": 115294,
+ "nations": [
+  {
+   "name": "London",
+   "x": 410,
+   "y": 639
+  },
+  {
+   "name": "Birmingham",
+   "x": 341,
+   "y": 573
+  },
+  {
+   "name": "Manchester",
+   "x": 328,
+   "y": 504
+  },
+  {
+   "name": "Leeds",
+   "x": 354,
+   "y": 481
+  },
+  {
+   "name": "Sheffield",
+   "x": 357,
+   "y": 513
+  },
+  {
+   "name": "Glasgow",
+   "x": 251,
+   "y": 343
+  },
+  {
+   "name": "Dublin",
+   "x": 174,
+   "y": 515
+  },
+  {
+   "name": "Newcastle",
+   "x": 353,
+   "y": 402
+  },
+  {
+   "name": "Cardiff",
+   "x": 291,
+   "y": 639
+  },
+  {
+   "name": "Nottingham",
+   "x": 370,
+   "y": 540
+  },
+  {
+   "name": "Liverpool",
+   "x": 303,
+   "y": 510
+  },
+  {
+   "name": "Southend-on-Sea",
+   "x": 443,
+   "y": 636
+  },
+  {
+   "name": "Bristol",
+   "x": 316,
+   "y": 643
+  },
+  {
+   "name": "Edinburgh",
+   "x": 291,
+   "y": 338
+  },
+  {
+   "name": "Brighton",
+   "x": 408,
+   "y": 685
+  },
+  {
+   "name": "Leicester",
+   "x": 371,
+   "y": 563
+  },
+  {
+   "name": "Sunderland",
+   "x": 362,
+   "y": 408
+  },
+  {
+   "name": "Belfast",
+   "x": 186,
+   "y": 429
+  },
+  {
+   "name": "Portsmouth",
+   "x": 373,
+   "y": 687
+  },
+  {
+   "name": "Bournemouth",
+   "x": 342,
+   "y": 692
+  },
+  {
+   "name": "Middlesbrough",
+   "x": 368,
+   "y": 431
+  },
+  {
+   "name": "Stoke",
+   "x": 331,
+   "y": 538
+  },
+  {
+   "name": "Coventry",
+   "x": 357,
+   "y": 577
+  },
+  {
+   "name": "Southampton",
+   "x": 361,
+   "y": 680
+  },
+  {
+   "name": "Reading",
+   "x": 377,
+   "y": 641
+  },
+  {
+   "name": "Kingston upon Hull",
+   "x": 402,
+   "y": 487
+  },
+  {
+   "name": "Swansea",
+   "x": 263,
+   "y": 631
+  },
+  {
+   "name": "Blackpool",
+   "x": 298,
+   "y": 482
+  },
+  {
+   "name": "Plymouth",
+   "x": 255,
+   "y": 715
+  },
+  {
+   "name": "Luton",
+   "x": 399,
+   "y": 614
+  },
+  {
+   "name": "Oxford",
+   "x": 367,
+   "y": 621
+  },
+  {
+   "name": "Norwich",
+   "x": 465,
+   "y": 563
+  },
+  {
+   "name": "Aberdeen",
+   "x": 335,
+   "y": 255
+  },
+  {
+   "name": "Cork",
+   "x": 88,
+   "y": 612
+  },
+  {
+   "name": "York",
+   "x": 373,
+   "y": 472
+  },
+  {
+   "name": "Dundee",
+   "x": 299,
+   "y": 303
+  },
+  {
+   "name": "Ipswich",
+   "x": 460,
+   "y": 601
+  },
+  {
+   "name": "Peterborough",
+   "x": 405,
+   "y": 566
+  },
+  {
+   "name": "Cambridge",
+   "x": 419,
+   "y": 592
+  },
+  {
+   "name": "Exeter",
+   "x": 279,
+   "y": 694
+  },
+  {
+   "name": "Bath",
+   "x": 324,
+   "y": 647
+  },
+  {
+   "name": "Limerick",
+   "x": 83,
+   "y": 561
+  },
+  {
+   "name": "Chester",
+   "x": 303,
+   "y": 524
+  },
+  {
+   "name": "Londonderry",
+   "x": 133,
+   "y": 402
+  },
+  {
+   "name": "Galway",
+   "x": 67,
+   "y": 519
+  },
+  {
+   "name": "Greenock",
+   "x": 232,
+   "y": 339
+  },
+  {
+   "name": "Carlisle",
+   "x": 302,
+   "y": 411
+  },
+  {
+   "name": "Scarborough",
+   "x": 398,
+   "y": 451
+  },
+  {
+   "name": "Ayr",
+   "x": 237,
+   "y": 372
+  },
+  {
+   "name": "Waterford",
+   "x": 141,
+   "y": 588
+  },
+  {
+   "name": "Inverness",
+   "x": 252,
+   "y": 235
+  },
+  {
+   "name": "Perth",
+   "x": 281,
+   "y": 308
+  },
+  {
+   "name": "Dundalk",
+   "x": 168,
+   "y": 470
+  },
+  {
+   "name": "Drogheda",
+   "x": 171,
+   "y": 489
+  },
+  {
+   "name": "Dover",
+   "x": 465,
+   "y": 664
+  },
+  {
+   "name": "Douglas",
+   "x": 243,
+   "y": 460
+  },
+  {
+   "name": "Dumfries",
+   "x": 278,
+   "y": 398
+  },
+  {
+   "name": "Tralee",
+   "x": 41,
+   "y": 587
+  },
+  {
+   "name": "Kilkenny",
+   "x": 136,
+   "y": 561
+  },
+  {
+   "name": "Omagh",
+   "x": 134,
+   "y": 429
+  },
+  {
+   "name": "Penzance",
+   "x": 201,
+   "y": 732
+  },
+  {
+   "name": "Sligo",
+   "x": 89,
+   "y": 452
+  },
+  {
+   "name": "Lisburn",
+   "x": 158,
+   "y": 435
+  },
+  {
+   "name": "Killarney",
+   "x": 49,
+   "y": 602
+  },
+  {
+   "name": "Fort William",
+   "x": 218,
+   "y": 279
+  },
+  {
+   "name": "Shannon",
+   "x": 74,
+   "y": 558
+  },
+  {
+   "name": "Kirkwall",
+   "x": 301,
+   "y": 134
+  },
+  {
+   "name": "Wick",
+   "x": 296,
+   "y": 170
+  },
+  {
+   "name": "Lerwick",
+   "x": 371,
+   "y": 54
+  },
+  {
+   "name": "Muineachan",
+   "x": 147,
+   "y": 453
+  }
+ ]
+}

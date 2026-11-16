@@ -1,0 +1,340 @@
+{
+ "id": "japan",
+ "name": "Japan",
+ "width": 660,
+ "height": 730,
+ "file": "japan.bin",
+ "landTiles": 70514,
+ "nations": [
+  {
+   "name": "Tokyo",
+   "x": 424,
+   "y": 482
+  },
+  {
+   "name": "Osaka",
+   "x": 262,
+   "y": 527
+  },
+  {
+   "name": "Yokohama",
+   "x": 418,
+   "y": 494
+  },
+  {
+   "name": "Nagoya",
+   "x": 317,
+   "y": 507
+  },
+  {
+   "name": "Fukuoka",
+   "x": 71,
+   "y": 582
+  },
+  {
+   "name": "Sapporo",
+   "x": 484,
+   "y": 129
+  },
+  {
+   "name": "Sendai",
+   "x": 472,
+   "y": 358
+  },
+  {
+   "name": "Hiroshima",
+   "x": 148,
+   "y": 544
+  },
+  {
+   "name": "Kyoto",
+   "x": 273,
+   "y": 513
+  },
+  {
+   "name": "Kobe",
+   "x": 251,
+   "y": 530
+  },
+  {
+   "name": "Kitakyushu",
+   "x": 87,
+   "y": 569
+  },
+  {
+   "name": "Hamamatsu",
+   "x": 348,
+   "y": 528
+  },
+  {
+   "name": "Okayama",
+   "x": 204,
+   "y": 530
+  },
+  {
+   "name": "Kumamoto",
+   "x": 82,
+   "y": 620
+  },
+  {
+   "name": "Shizuoka",
+   "x": 372,
+   "y": 515
+  },
+  {
+   "name": "Utsunomiya",
+   "x": 428,
+   "y": 441
+  },
+  {
+   "name": "Nagano",
+   "x": 364,
+   "y": 436
+  },
+  {
+   "name": "Hachioji",
+   "x": 408,
+   "y": 483
+  },
+  {
+   "name": "Niigata",
+   "x": 397,
+   "y": 375
+  },
+  {
+   "name": "Kagoshima",
+   "x": 77,
+   "y": 678
+  },
+  {
+   "name": "Kanazawa",
+   "x": 306,
+   "y": 440
+  },
+  {
+   "name": "Matsuyama",
+   "x": 160,
+   "y": 570
+  },
+  {
+   "name": "Tsu",
+   "x": 302,
+   "y": 528
+  },
+  {
+   "name": "Oita",
+   "x": 116,
+   "y": 599
+  },
+  {
+   "name": "Tokushima",
+   "x": 228,
+   "y": 559
+  },
+  {
+   "name": "Wakayama",
+   "x": 251,
+   "y": 552
+  },
+  {
+   "name": "Nagasaki",
+   "x": 52,
+   "y": 621
+  },
+  {
+   "name": "Gifu",
+   "x": 311,
+   "y": 495
+  },
+  {
+   "name": "Iwaki",
+   "x": 467,
+   "y": 417
+  },
+  {
+   "name": "Asahikawa",
+   "x": 523,
+   "y": 97
+  },
+  {
+   "name": "Mito",
+   "x": 451,
+   "y": 449
+  },
+  {
+   "name": "Maebashi",
+   "x": 398,
+   "y": 448
+  },
+  {
+   "name": "Koriyama",
+   "x": 448,
+   "y": 400
+  },
+  {
+   "name": "Kawagoe",
+   "x": 414,
+   "y": 471
+  },
+  {
+   "name": "Kochi",
+   "x": 189,
+   "y": 583
+  },
+  {
+   "name": "Takamatsu",
+   "x": 209,
+   "y": 546
+  },
+  {
+   "name": "Toyama",
+   "x": 329,
+   "y": 434
+  },
+  {
+   "name": "Miyazaki",
+   "x": 110,
+   "y": 662
+  },
+  {
+   "name": "Akita",
+   "x": 437,
+   "y": 290
+  },
+  {
+   "name": "Hakodate",
+   "x": 461,
+   "y": 191
+  },
+  {
+   "name": "Aomori",
+   "x": 460,
+   "y": 237
+  },
+  {
+   "name": "Morioka",
+   "x": 476,
+   "y": 290
+  },
+  {
+   "name": "Fukushima",
+   "x": 451,
+   "y": 384
+  },
+  {
+   "name": "Yamagata",
+   "x": 445,
+   "y": 359
+  },
+  {
+   "name": "Fukui",
+   "x": 291,
+   "y": 464
+  },
+  {
+   "name": "Shimonoseki",
+   "x": 92,
+   "y": 564
+  },
+  {
+   "name": "Hachinohe",
+   "x": 491,
+   "y": 252
+  },
+  {
+   "name": "Sasebo",
+   "x": 45,
+   "y": 602
+  },
+  {
+   "name": "Matsumoto",
+   "x": 357,
+   "y": 456
+  },
+  {
+   "name": "Kushiro",
+   "x": 598,
+   "y": 134
+  },
+  {
+   "name": "Kofu",
+   "x": 380,
+   "y": 484
+  },
+  {
+   "name": "Kure",
+   "x": 153,
+   "y": 551
+  },
+  {
+   "name": "Nagaoka",
+   "x": 390,
+   "y": 398
+  },
+  {
+   "name": "Hirosaki",
+   "x": 451,
+   "y": 249
+  },
+  {
+   "name": "Tomakomai",
+   "x": 492,
+   "y": 150
+  },
+  {
+   "name": "Obihiro",
+   "x": 553,
+   "y": 136
+  },
+  {
+   "name": "Takaoka",
+   "x": 320,
+   "y": 435
+  },
+  {
+   "name": "Matsue",
+   "x": 172,
+   "y": 493
+  },
+  {
+   "name": "Muroran",
+   "x": 470,
+   "y": 164
+  },
+  {
+   "name": "Tottori",
+   "x": 216,
+   "y": 491
+  },
+  {
+   "name": "Otaru",
+   "x": 470,
+   "y": 124
+  },
+  {
+   "name": "Kitami",
+   "x": 580,
+   "y": 93
+  },
+  {
+   "name": "Sakata",
+   "x": 428,
+   "y": 328
+  },
+  {
+   "name": "Tsuruoka",
+   "x": 427,
+   "y": 338
+  },
+  {
+   "name": "Maizuru",
+   "x": 257,
+   "y": 493
+  },
+  {
+   "name": "Kanoya",
+   "x": 88,
+   "y": 687
+  }
+ ]
+}

@@ -8,7 +8,8 @@
 
 namespace fc {
 
-enum Terrain { T_DEEP = 0, T_SHALLOW, T_PLAINS, T_HILLS, T_MOUNTAINS, T_DESERT, T_TUNDRA };
+// T_BLOCKED: land of a country that is not part of this map (grey, nobody can take it)
+enum Terrain { T_DEEP = 0, T_SHALLOW, T_PLAINS, T_HILLS, T_MOUNTAINS, T_DESERT, T_TUNDRA, T_BLOCKED };
 enum Mode { MODE_FFA = 0, MODE_TEAMS, MODE_CONQUEST, MODE_SANDBOX, MODE_CUSTOM, MODE_COUNT };
 enum Difficulty { DIFF_EASY = 0, DIFF_NORMAL, DIFF_HARD };
 enum BuildingType { B_CITY = 0, B_MARKET, B_MINE, B_FORT, B_COUNT };
@@ -35,7 +36,7 @@ struct MapData {
 
     bool load(const std::string& mapsDir, const std::string& mapId, std::string* err);
     int terrain(int i) const { return tiles[i] & 15; }
-    bool isLand(int i) const { return (tiles[i] & 15) >= T_PLAINS; }
+    bool isLand(int i) const { int t = tiles[i] & 15; return t >= T_PLAINS && t <= T_TUNDRA; }
     bool isWater(int i) const { return (tiles[i] & 15) <= T_SHALLOW; }
     bool countryBorder(int i) const { return (tiles[i] & 16) != 0; }
 };
@@ -57,6 +58,9 @@ struct Settings {
     int troopSpeed = 100;    // percent
     bool aiAttacks = true;   // sandbox: AI may be peaceful
     int numHumans = 1;       // multiplayer: players 1..numHumans are people
+    // single player cheats (ignored in multiplayer)
+    bool cheatTroops = false, cheatGold = false, cheatMaterials = false, cheatGod = false, cheatFast = false;
+    bool anyCheat() const { return cheatTroops || cheatGold || cheatMaterials || cheatGod || cheatFast; }
     unsigned seed = 12345;
 
     bool teamsEnabled() const { return mode == MODE_TEAMS || (mode == MODE_CUSTOM && customTeams); }
@@ -142,6 +146,8 @@ public:
     void autoSpawnRemaining();           // random start for humans who did not choose
     void makeAI(int p);                  // a player who left is taken over by the AI
     bool isHuman(int p) const { return p > 0 && p < (int)players.size() && players[p].human; }
+    // cheats only ever work for the person in a single player game
+    bool cheatsFor(int p) const { return settings.numHumans == 1 && isHuman(p); }
     bool eventVisible(const GameEvent& e) const { return e.player == 0 || e.player == humanId; }
     unsigned eventSeq = 0;
     bool canSpawnAt(int tile) const;

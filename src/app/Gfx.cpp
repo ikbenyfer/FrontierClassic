@@ -302,7 +302,7 @@ static void unpack565(uint16_t c, int& r, int& g, int& b) {
     b = (c & 31) << 3;
 }
 
-static const int kTerrainRGB[7][3] = {
+static const int kTerrainRGB[8][3] = {
     {28, 58, 104},   // deep water
     {48, 92, 146},   // shallow water
     {112, 150, 86},  // plains
@@ -310,6 +310,7 @@ static const int kTerrainRGB[7][3] = {
     {124, 114, 106}, // mountains
     {204, 184, 128}, // desert
     {196, 206, 204}, // tundra
+    {72, 76, 84},    // blocked (other countries)
 };
 
 void Gfx::setMap(const Game& g) {
@@ -319,7 +320,7 @@ void Gfx::setMap(const Game& g) {
     terrainPix_.resize(n);
     for (int t = 0; t < n; ++t) {
         int tr = g.map.terrain(t);
-        if (tr > 6) tr = 2;
+        if (tr > 7) tr = 2;
         uint32_t h = (uint32_t)t;  // small per-tile colour noise (well mixed: no stripes)
         h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15; h *= 0x846ca68bu; h ^= h >> 16;
         int v = (int)(h & 7) - 3;

@@ -121,6 +121,11 @@ JVal Settings::toJson() const {
     j.set("troopSpeed", troopSpeed);
     j.set("aiAttacks", aiAttacks);
     j.set("numHumans", numHumans);
+    j.set("cheatTroops", cheatTroops);
+    j.set("cheatGold", cheatGold);
+    j.set("cheatMaterials", cheatMaterials);
+    j.set("cheatGod", cheatGod);
+    j.set("cheatFast", cheatFast);
     j.set("seed", (double)seed);
     return j;
 }
@@ -139,6 +144,11 @@ void Settings::fromJson(const JVal& j) {
     troopSpeed = clampi(j["troopSpeed"].i(100), 25, 400);
     aiAttacks = j["aiAttacks"].boolean(true);
     numHumans = clampi(j["numHumans"].i(1), 1, 8);
+    cheatTroops = j["cheatTroops"].boolean(false);
+    cheatGold = j["cheatGold"].boolean(false);
+    cheatMaterials = j["cheatMaterials"].boolean(false);
+    cheatGod = j["cheatGod"].boolean(false);
+    cheatFast = j["cheatFast"].boolean(false);
     seed = (unsigned)j["seed"].num(12345);
 }
 
@@ -568,6 +578,11 @@ void Game::growPlayers() {
         else pl.troops -= (pl.troops - mx) * 0.01;
         pl.gold += goldIncome((int)p) / TICKS_PER_SECOND;
         pl.materials += materialIncome((int)p) / TICKS_PER_SECOND;
+        if (cheatsFor((int)p)) {  // "infinite": topped up every tick
+            if (settings.cheatTroops) pl.troops = 9999999;
+            if (settings.cheatGold) pl.gold = 99999999;
+            if (settings.cheatMaterials) pl.materials = 99999999;
+        }
     }
 }
 
@@ -709,6 +724,7 @@ double Game::fortBonus(int tile, int defender) const {
 double Game::tileCost(int tile, int target) const {
     double tm = terrainMul(map.terrain(tile));
     if (target == 0) return 5.0 * tm;
+    if (settings.cheatGod && cheatsFor(target)) return 1e12;  // nobody can take your land
     const Player& d = players[target];
     double density = d.troops / std::max(1, d.tiles);
     return tm * (5.0 + density * 1.1) * fortBonus(tile, target);
@@ -816,6 +832,7 @@ void Game::stepAttack(Attack& a) {
     }
     int budget = 2 + (int)a.frontier.size() / 7;
     if (budget > 90) budget = 90;
+    if (settings.cheatFast && cheatsFor(a.attacker)) budget = std::min(1500, 20 + (int)a.frontier.size() / 2);
     int guard = budget * 4 + 8;
     int conquered = 0;
     Player* dp = a.target ? &players[a.target] : 0;

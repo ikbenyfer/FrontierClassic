@@ -13,7 +13,7 @@ namespace fc {
 const int kDefaultPort = 47800;
 const int kMaxClients = 7;
 const unsigned kProtocolMagic = 0x504D4346;  // "FCMP"
-const unsigned kProtocolVersion = 2;
+const unsigned kProtocolVersion = 3;
 const size_t kMaxNameLength = 12;
 
 // Makes a player name safe to show: printable ASCII, 1..12 characters.

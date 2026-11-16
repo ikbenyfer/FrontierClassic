@@ -1,0 +1,360 @@
+{
+ "id": "middleeast",
+ "name": "Middle East",
+ "width": 860,
+ "height": 760,
+ "file": "middleeast.bin",
+ "landTiles": 500096,
+ "nations": [
+  {
+   "name": "Saudi Arabia",
+   "x": 442,
+   "y": 452
+  },
+  {
+   "name": "Sudan",
+   "x": 111,
+   "y": 659
+  },
+  {
+   "name": "Iran",
+   "x": 662,
+   "y": 238
+  },
+  {
+   "name": "Egypt",
+   "x": 109,
+   "y": 392
+  },
+  {
+   "name": "Turkey",
+   "x": 235,
+   "y": 76
+  },
+  {
+   "name": "Turkmenistan",
+   "x": 778,
+   "y": 73
+  },
+  {
+   "name": "Iraq",
+   "x": 424,
+   "y": 226
+  },
+  {
+   "name": "Yemen",
+   "x": 510,
+   "y": 660
+  },
+  {
+   "name": "Oman",
+   "x": 703,
+   "y": 542
+  },
+  {
+   "name": "Syria",
+   "x": 305,
+   "y": 176
+  },
+  {
+   "name": "Eritrea",
+   "x": 313,
+   "y": 675
+  },
+  {
+   "name": "Azerbaijan",
+   "x": 512,
+   "y": 41
+  },
+  {
+   "name": "Jordan",
+   "x": 266,
+   "y": 272
+  },
+  {
+   "name": "United Arab Emirates",
+   "x": 663,
+   "y": 458
+  },
+  {
+   "name": "Armenia",
+   "x": 451,
+   "y": 43
+  },
+  {
+   "name": "Israel",
+   "x": 226,
+   "y": 267
+  },
+  {
+   "name": "Kuwait",
+   "x": 510,
+   "y": 321
+  },
+  {
+   "name": "Qatar",
+   "x": 592,
+   "y": 422
+  },
+  {
+   "name": "Lebanon",
+   "x": 246,
+   "y": 204
+  },
+  {
+   "name": "Palestine",
+   "x": 231,
+   "y": 254
+  },
+  {
+   "name": "Cyprus",
+   "x": 180,
+   "y": 179
+  },
+  {
+   "name": "N. Cyprus",
+   "x": 194,
+   "y": 170
+  },
+  {
+   "name": "Bir Tawil",
+   "x": 196,
+   "y": 509
+  },
+  {
+   "name": "Greece",
+   "x": 28,
+   "y": 71
+  },
+  {
+   "name": "Cairo",
+   "x": 141,
+   "y": 302
+  },
+  {
+   "name": "Istanbul",
+   "x": 90,
+   "y": 22
+  },
+  {
+   "name": "Tehran",
+   "x": 597,
+   "y": 160
+  },
+  {
+   "name": "Baghdad",
+   "x": 438,
+   "y": 219
+  },
+  {
+   "name": "Khartoum",
+   "x": 170,
+   "y": 669
+  },
+  {
+   "name": "Riyadh",
+   "x": 492,
+   "y": 439
+  },
+  {
+   "name": "Alexandria",
+   "x": 111,
+   "y": 273
+  },
+  {
+   "name": "Ankara",
+   "x": 177,
+   "y": 52
+  },
+  {
+   "name": "Tel Aviv-Yafo",
+   "x": 221,
+   "y": 251
+  },
+  {
+   "name": "Jeddah",
+   "x": 321,
+   "y": 518
+  },
+  {
+   "name": "Aleppo",
+   "x": 275,
+   "y": 146
+  },
+  {
+   "name": "Izmir",
+   "x": 48,
+   "y": 90
+  },
+  {
+   "name": "Mashhad",
+   "x": 782,
+   "y": 145
+  },
+  {
+   "name": "Damascus",
+   "x": 255,
+   "y": 215
+  },
+  {
+   "name": "Baku",
+   "x": 562,
+   "y": 40
+  },
+  {
+   "name": "Kuwait City",
+   "x": 519,
+   "y": 319
+  },
+  {
+   "name": "Ad Damman",
+   "x": 568,
+   "y": 394
+  },
+  {
+   "name": "Sanaa",
+   "x": 434,
+   "y": 674
+  },
+  {
+   "name": "Beirut",
+   "x": 237,
+   "y": 205
+  },
+  {
+   "name": "Isfahan",
+   "x": 604,
+   "y": 235
+  },
+  {
+   "name": "Bursa",
+   "x": 92,
+   "y": 45
+  },
+  {
+   "name": "Doha",
+   "x": 600,
+   "y": 423
+  },
+  {
+   "name": "Karaj",
+   "x": 587,
+   "y": 157
+  },
+  {
+   "name": "Tabriz",
+   "x": 482,
+   "y": 99
+  },
+  {
+   "name": "Makkah",
+   "x": 335,
+   "y": 521
+  },
+  {
+   "name": "Dubai",
+   "x": 685,
+   "y": 424
+  },
+  {
+   "name": "Mosul",
+   "x": 410,
+   "y": 143
+  },
+  {
+   "name": "Adana",
+   "x": 233,
+   "y": 126
+  },
+  {
+   "name": "Shiraz",
+   "x": 623,
+   "y": 313
+  },
+  {
+   "name": "Yerevan",
+   "x": 441,
+   "y": 46
+  },
+  {
+   "name": "Tbilisi",
+   "x": 447,
+   "y": 6
+  },
+  {
+   "name": "Amman",
+   "x": 247,
+   "y": 254
+  },
+  {
+   "name": "Gaziantep",
+   "x": 280,
+   "y": 124
+  },
+  {
+   "name": "Haifa",
+   "x": 225,
+   "y": 232
+  },
+  {
+   "name": "Medina",
+   "x": 329,
+   "y": 443
+  },
+  {
+   "name": "Hims",
+   "x": 265,
+   "y": 184
+  },
+  {
+   "name": "Aden",
+   "x": 452,
+   "y": 740
+  },
+  {
+   "name": "Ahvaz",
+   "x": 536,
+   "y": 271
+  },
+  {
+   "name": "Dahuk",
+   "x": 407,
+   "y": 130
+  },
+  {
+   "name": "Qom",
+   "x": 587,
+   "y": 186
+  },
+  {
+   "name": "Irbil",
+   "x": 430,
+   "y": 147
+  },
+  {
+   "name": "Konya",
+   "x": 169,
+   "y": 104
+  },
+  {
+   "name": "Tarsus",
+   "x": 223,
+   "y": 128
+  },
+  {
+   "name": "Basra",
+   "x": 516,
+   "y": 290
+  },
+  {
+   "name": "Kermanshah",
+   "x": 499,
+   "y": 192
+  },
+  {
+   "name": "Antalya",
+   "x": 128,
+   "y": 129
+  }
+ ]
+}
