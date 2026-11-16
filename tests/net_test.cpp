@@ -81,25 +81,25 @@ static int relayTest(const std::string& mapsDir, const std::string& server, int 
     }
 
     HostSession host;
-    CHECK(host.startRelay(server, port, "Yfer", &err), err.c_str());
-    for (int k = 0; k < 3000 && host.relayState() == 1; ++k) { host.pumpLobby("relay lobby", "Yfer"); nap(); }
+    CHECK(host.startRelay(server, port, "Kees", &err), err.c_str());
+    for (int k = 0; k < 3000 && host.relayState() == 1; ++k) { host.pumpLobby("relay lobby", "Kees"); nap(); }
     CHECK(host.relayState() == 2, "room opened on the relay");
     if (host.relayState() != 2) { printf("  relay error: %s\n", host.relayError().c_str()); return 1; }
 
     {   // the same name twice is refused (capitals do not matter)
         HostSession dup;
-        CHECK(dup.startRelay(server, port, "yFER", &err), err.c_str());
-        for (int k = 0; k < 3000 && dup.relayState() == 1; ++k) { dup.pumpLobby("x", "yFER"); host.pumpLobby("relay lobby", "Yfer"); nap(); }
+        CHECK(dup.startRelay(server, port, "kEES", &err), err.c_str());
+        for (int k = 0; k < 3000 && dup.relayState() == 1; ++k) { dup.pumpLobby("x", "kEES"); host.pumpLobby("relay lobby", "Kees"); nap(); }
         CHECK(dup.relayState() == 3 && dup.relayError().find("in gebruik") != std::string::npos, "duplicate room name is refused");
         printf("  duplicate name -> \"%s\"\n", dup.relayError().c_str());
     }
 
     ClientSession c1, c2;
     Game g, g1, g2;
-    CHECK(c1.connectRelay(server, port, "YFER", "Anna", &err), err.c_str());
-    CHECK(c2.connectRelay(server, port, "yfer", "Bram", &err), err.c_str());
+    CHECK(c1.connectRelay(server, port, "KEES", "Anna", &err), err.c_str());
+    CHECK(c2.connectRelay(server, port, "kees", "Bram", &err), err.c_str());
     for (int k = 0; k < 4000; ++k) {
-        host.pumpLobby("relay lobby", "Yfer");
+        host.pumpLobby("relay lobby", "Kees");
         c1.pump(g1, mapsDir);
         c2.pump(g2, mapsDir);
         if (host.clientCount() == 2 && c1.lobbyNames().size() == 3 && c2.lobbyNames().size() == 3) break;
@@ -115,7 +115,7 @@ static int relayTest(const std::string& mapsDir, const std::string& server, int 
     s.numHumans = 3;
     s.seed = 99;
     CHECK(g.newGame(s, mapsDir, &err), err.c_str());
-    host.startGame(g, "Yfer");
+    host.startGame(g, "Kees");
     bool s1 = false, s2 = false;
     for (int k = 0; k < 4000 && !(s1 && s2); ++k) {
         host.pumpGame(g);
@@ -139,7 +139,7 @@ static int relayTest(const std::string& mapsDir, const std::string& server, int 
     {   // someone who joins after the start is told so
         ClientSession late;
         Game d;
-        CHECK(late.connectRelay(server, port, "Yfer", "Laat", &err), err.c_str());
+        CHECK(late.connectRelay(server, port, "Kees", "Laat", &err), err.c_str());
         for (int k = 0; k < 3000 && late.state() != ClientSession::CLOSED; ++k) { host.pumpGame(g); late.pump(d, mapsDir); nap(); }
         CHECK(late.state() == ClientSession::CLOSED && late.closeReason().find("al begonnen") != std::string::npos,
               "late joiner is refused");
@@ -185,8 +185,8 @@ static int relayTest(const std::string& mapsDir, const std::string& server, int 
 
     // the name is free again after the host left
     HostSession again;
-    CHECK(again.startRelay(server, port, "Yfer", &err), err.c_str());
-    for (int k = 0; k < 3000 && again.relayState() == 1; ++k) { again.pumpLobby("x", "Yfer"); nap(); }
+    CHECK(again.startRelay(server, port, "Kees", &err), err.c_str());
+    for (int k = 0; k < 3000 && again.relayState() == 1; ++k) { again.pumpLobby("x", "Kees"); nap(); }
     CHECK(again.relayState() == 2, "room name is free again after the host left");
     again.stop();
 
@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
     CHECK(c1.connect("127.0.0.1", port, "Anna", &err), err.c_str());
     CHECK(c2.connect("127.0.0.1", port, "  <Anna!>  ", &err), err.c_str());
     for (int k = 0; k < 2000; ++k) {
-        host.pumpLobby("test lobby", "Yfer");
+        host.pumpLobby("test lobby", "Kees");
         c1.pump(g1, mapsDir);
         c2.pump(g2, mapsDir);
         if (host.clientCount() == 2 && c1.lobbyCount() == 3 && c2.lobbyCount() == 3) break;
@@ -238,8 +238,8 @@ int main(int argc, char** argv) {
     CHECK(host.clientCount() == 2, "two clients in the lobby");
     CHECK(c1.lobbyCount() == 3 && c2.lobbyCount() == 3 && c1.lobbyInfo() == "test lobby", "clients see the lobby");
     CHECK(c1.lobbySlot() != c2.lobbySlot(), "different slots");
-    for (int k = 0; k < 600 && c1.lobbyNames().size() != 3; ++k) { host.pumpLobby("test lobby", "Yfer"); c1.pump(g1, mapsDir); nap(); }
-    CHECK(c1.lobbyNames().size() == 3 && c1.lobbyNames()[0] == "Yfer", "lobby shows the host's name");
+    for (int k = 0; k < 600 && c1.lobbyNames().size() != 3; ++k) { host.pumpLobby("test lobby", "Kees"); c1.pump(g1, mapsDir); nap(); }
+    CHECK(c1.lobbyNames().size() == 3 && c1.lobbyNames()[0] == "Kees", "lobby shows the host's name");
     if (c1.lobbyNames().size() == 3)
         printf("  lobby names: %s | %s | %s\n", c1.lobbyNames()[0].c_str(), c1.lobbyNames()[1].c_str(), c1.lobbyNames()[2].c_str());
 
@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
     s.numHumans = 3;
     s.seed = 4242;
     CHECK(g.newGame(s, mapsDir, &err), err.c_str());
-    host.startGame(g, "Yfer");
+    host.startGame(g, "Kees");
     bool s1 = false, s2 = false;
     for (int k = 0; k < 2000 && !(s1 && s2); ++k) {
         host.pumpGame(g);
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
     CHECK(g1.humanId != g2.humanId && g1.humanId >= 2 && g2.humanId >= 2, "clients got their own player");
     CHECK(g1.owner == g.owner && g2.owner == g.owner, "start state is identical");
     CHECK(g.spawnPhase, "spawn phase waits for the players");
-    CHECK(g1.players[1].name == "Yfer" && g1.players[g1.humanId].name.compare(0, 4, "Anna") == 0, "names are used in the game");
+    CHECK(g1.players[1].name == "Kees" && g1.players[g1.humanId].name.compare(0, 4, "Anna") == 0, "names are used in the game");
     CHECK(g.players[2].name != g.players[3].name, "equal names are made different");
     printf("  in-game names: %s | %s | %s\n", g.players[1].name.c_str(), g.players[2].name.c_str(), g.players[3].name.c_str());
     CHECK(g.players[g2.humanId].name.find('<') == std::string::npos && g.players[g2.humanId].name.size() <= kMaxNameLength,

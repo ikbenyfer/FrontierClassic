@@ -152,7 +152,7 @@ static int spawnNear(Game& g, const char* nation) {
 static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& dir) {
     const int port = 47955;
     app.lookupPublicIp = false;  // automated run: no calls to outside services
-    app.setPlayerName("Yfer");
+    app.setPlayerName("Kees");
     app.screen = SCR_NAME;
     shot(app, win, dir + "/15b_name.bmp");
     app.setServer("mijnnas.synology.me", true);

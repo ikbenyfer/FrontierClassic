@@ -9,6 +9,17 @@ The only network code is the optional multiplayer (plain TCP sockets, `src/net`)
 
 There is also a **Windows version** (64-bit, one `.exe`), built from the same source.
 
+## Spelen / Download
+
+Download de nieuwste versie onder **[Releases](https://github.com/ikbenyfer/FrontierClassic/releases/latest)**:
+
+- **Windows (64-bit):** `FrontierClassic-Windows-x.y.z.zip` uitpakken en `FrontierClassic.exe` starten.
+  Windows kan waarschuwen dat de uitgever onbekend is: kies "Meer informatie" > "Toch uitvoeren".
+- **iPad (iOS 9.3 - armv7, bijv. iPad 2):** `FrontierClassic-x.y.z.ipa`. Alleen te installeren op een
+  gejailbreakte iPad met AppSync Unified (de app is niet door Apple ondertekend).
+
+Singleplayer werkt volledig offline. Voor multiplayer: zie hieronder.
+
 ## What's in it
 
 | Part | Contents |
@@ -63,3 +74,4 @@ Download `FrontierClassic-x.y.z.ipa` from Releases and install it with the **iPa
 ## Credits
 
 Maps: Natural Earth (public domain). Font: Aileron (CC0). SDL2 (zlib licence).
+Music: "Holding The Ridge", made with Google's generative AI.
