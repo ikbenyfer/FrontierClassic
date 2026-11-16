@@ -35,6 +35,45 @@ jobs:
           g++ -std=c++11 -O2 -Wall -Wextra -Werror src/core/*.cpp src/net/*.cpp tests/net_test.cpp -pthread -o net_test
           ./net_test Resources/maps
 
+      - name: Doorgeefserver bouwen en testen (spel via de server, verkeerde invoer)
+        run: |
+          g++ -std=c++11 -O2 -Wall -Wextra -Werror server/relay.cpp -o relay
+          ./relay 47993 > relay.log 2>&1 &
+          RELAY=$!
+          sleep 1
+          ./net_test Resources/maps relay 127.0.0.1 47993
+          # rommel sturen: de server moet blijven draaien
+          python3 - <<'PY'
+          import os, socket, struct
+          for n in range(40):
+              s = socket.create_connection(("127.0.0.1", 47993), timeout=3)
+              junk = [os.urandom(2000), b"GET / HTTP/1.1\r\n\r\n", struct.pack("<IB", 0xFFFFFFFF, 100),
+                      struct.pack("<IB", 300, 101) + b"x" * 5, struct.pack("<IBI", 5, 102, 12345), b""][n % 6]
+              try:
+                  s.sendall(junk)
+              except OSError:
+                  pass
+              s.close()
+          print("junk sent")
+          PY
+          ./net_test Resources/maps relay 127.0.0.1 47993 | tail -3
+          echo "== geheugen van de server na twee potjes en 40 rommelverbindingen"
+          grep -E "VmRSS|VmHWM" /proc/$RELAY/status
+          kill -TERM $RELAY
+          wait $RELAY || true
+          tail -4 relay.log
+
+      - name: Doorgeefserver met geheugencontrole (AddressSanitizer + UBSan)
+        run: |
+          g++ -std=c++11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all server/relay.cpp -o relay_asan
+          ./relay_asan 47994 > relay_asan.log 2>&1 &
+          RELAY=$!
+          sleep 1
+          ./net_test Resources/maps relay 127.0.0.1 47994 | tail -3
+          kill -TERM $RELAY
+          wait $RELAY
+          cat relay_asan.log | tail -3
+
       - name: Multiplayer-test met geheugencontrole
         run: |
           g++ -std=c++11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all src/core/*.cpp src/net/*.cpp tests/net_test.cpp -pthread -o net_test_asan
@@ -67,12 +106,56 @@ jobs:
           grep -q "tiles different between host and client: 0," shots.log
           for f in shots/*.bmp; do convert "$f" "${f%.bmp}.png" && rm "$f"; done
           ls -l shots
-          test "$(ls shots/*.png | wc -l)" -ge 18
+          test "$(ls shots/*.png | wc -l)" -ge 21
 
       - uses: actions/upload-artifact@v4
         with:
           name: screenshots
           path: shots/*.png
+
+  server:
+    name: Doorgeefserver als Docker-container
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bouwen met docker compose (zoals op de NAS)
+        working-directory: server
+        run: |
+          docker compose build
+          docker image ls frontier-relay
+          docker compose up -d
+          sleep 2
+          docker compose ps
+          docker compose logs
+
+      - name: Een spel spelen via de container
+        run: |
+          g++ -std=c++11 -O2 src/core/*.cpp src/net/*.cpp tests/net_test.cpp -pthread -o net_test
+          ./net_test Resources/maps relay 127.0.0.1 47800
+
+      - name: Geheugen en grootte
+        working-directory: server
+        run: |
+          echo "== geheugen van de container (na een spel met 3 spelers)"
+          docker stats --no-stream --format "{{.Name}}: {{.MemUsage}}  cpu {{.CPUPerc}}" frontier-relay
+          echo "== grootte van de image"
+          docker image ls frontier-relay --format "{{.Repository}}: {{.Size}}"
+          docker compose logs | tail -8
+          echo "== stoppen"
+          time docker compose down
+
+      - name: Servermap als download
+        run: |
+          mkdir -p out/FrontierClassic-server
+          cp server/relay.cpp server/Dockerfile server/docker-compose.yml server/LEESMIJ.md out/FrontierClassic-server/
+          (cd out && zip -qr FrontierClassic-server.zip FrontierClassic-server)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FrontierClassic-server
+          path: out/FrontierClassic-server.zip
 
   windows:
     name: Windows-versie bouwen (64-bit)

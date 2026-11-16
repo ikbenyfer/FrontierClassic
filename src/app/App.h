@@ -30,7 +30,9 @@ public:
     bool hostLobby(int port, std::string* err);       // open a lobby with newSettings
     bool hostStart();                                  // start the game for everyone in the lobby
     bool joinGame(const std::string& ip, int port, std::string* err);
+    bool joinViaServer(const std::string& hostName, std::string* err);
     void leaveMultiplayer();
+    void setServer(const std::string& address, bool use) { serverAddr_ = address; viaServer_ = use; }
     HostSession& hostSession() { return host_; }
     bool lookupPublicIp = true;  // off in automated runs (no calls to outside services)
     void setPlayerName(const std::string& n) { playerName_ = cleanPlayerName(n); }
@@ -97,6 +99,14 @@ private:
     std::string joinIp_, portText_ = "47800";
     std::string playerName_ = "Speler";
     PublicIp publicIp_;
+    bool viaServer_ = false;        // play through a relay server instead of IP + port
+    std::string serverAddr_;        // "host" or "host:port"
+    std::string joinHost_;          // name of the host to join (server mode)
+    int editTarget_ = 0;            // text screen: 0 = my name, 1 = server address, 2 = host to join
+    Screen editReturn_ = SCR_MP;
+    void openEdit(int target, Screen back) { editTarget_ = target; editReturn_ = back; screen = SCR_NAME; }
+    std::string& editString() { return editTarget_ == 1 ? serverAddr_ : (editTarget_ == 2 ? joinHost_ : playerName_); }
+    bool serverAddress(std::string& host, int& port) const;
     void renderName();
     void playerList(float x, float y, const std::vector<std::string>& names, int self);
     int field_ = 0;                 // join screen: 0 = IP, 1 = port

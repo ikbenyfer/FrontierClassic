@@ -63,8 +63,143 @@ static void sendRandomOrders(ClientSession& c, const Game& g, int k) {
             }
 }
 
+
+// ---------------------------------------------------------------- relay server
+// Plays a game through a running relay server:  net_test <maps> relay <host> <port>
+static int relayTest(const std::string& mapsDir, const std::string& server, int port) {
+    std::string err;
+    printf("relay test against %s:%d\n", server.c_str(), port);
+
+    {   // joining a name nobody hosts
+        ClientSession lost;
+        Game d;
+        CHECK(lost.connectRelay(server, port, "Niemand", "Test", &err), err.c_str());
+        for (int k = 0; k < 3000 && lost.state() != ClientSession::CLOSED; ++k) { lost.pump(d, mapsDir); nap(); }
+        CHECK(lost.state() == ClientSession::CLOSED && lost.closeReason().find("Geen open spel") != std::string::npos,
+              "unknown host name is reported");
+        printf("  unknown name -> \"%s\"\n", lost.closeReason().c_str());
+    }
+
+    HostSession host;
+    CHECK(host.startRelay(server, port, "Yfer", &err), err.c_str());
+    for (int k = 0; k < 3000 && host.relayState() == 1; ++k) { host.pumpLobby("relay lobby", "Yfer"); nap(); }
+    CHECK(host.relayState() == 2, "room opened on the relay");
+    if (host.relayState() != 2) { printf("  relay error: %s\n", host.relayError().c_str()); return 1; }
+
+    {   // the same name twice is refused (capitals do not matter)
+        HostSession dup;
+        CHECK(dup.startRelay(server, port, "yFER", &err), err.c_str());
+        for (int k = 0; k < 3000 && dup.relayState() == 1; ++k) { dup.pumpLobby("x", "yFER"); host.pumpLobby("relay lobby", "Yfer"); nap(); }
+        CHECK(dup.relayState() == 3 && dup.relayError().find("in gebruik") != std::string::npos, "duplicate room name is refused");
+        printf("  duplicate name -> \"%s\"\n", dup.relayError().c_str());
+    }
+
+    ClientSession c1, c2;
+    Game g, g1, g2;
+    CHECK(c1.connectRelay(server, port, "YFER", "Anna", &err), err.c_str());
+    CHECK(c2.connectRelay(server, port, "yfer", "Bram", &err), err.c_str());
+    for (int k = 0; k < 4000; ++k) {
+        host.pumpLobby("relay lobby", "Yfer");
+        c1.pump(g1, mapsDir);
+        c2.pump(g2, mapsDir);
+        if (host.clientCount() == 2 && c1.lobbyNames().size() == 3 && c2.lobbyNames().size() == 3) break;
+        nap();
+    }
+    CHECK(host.clientCount() == 2, "two players joined through the relay");
+    CHECK(c1.lobbyNames().size() == 3 && c1.lobbyInfo() == "relay lobby", "lobby works through the relay");
+    if (host.clientCount() != 2) return 1;
+
+    Settings s;
+    s.mapId = "africa";
+    s.numAI = 20;
+    s.numHumans = 3;
+    s.seed = 99;
+    CHECK(g.newGame(s, mapsDir, &err), err.c_str());
+    host.startGame(g, "Yfer");
+    bool s1 = false, s2 = false;
+    for (int k = 0; k < 4000 && !(s1 && s2); ++k) {
+        host.pumpGame(g);
+        if (c1.pump(g1, mapsDir)) s1 = true;
+        if (c2.pump(g2, mapsDir)) s2 = true;
+        nap();
+    }
+    CHECK(s1 && s2, "game start arrives through the relay");
+    if (!(s1 && s2)) return 1;
+    CHECK(g1.players[g1.humanId].name == "Anna" || g1.players[g1.humanId].name == "Bram", "names through the relay");
+
+    CHECK(g.spawnHuman(freeTileFrom(g, (int)g.owner.size() / 3)), "host spawns");
+    c1.sendOrder(ORD_SPAWN, freeTileFrom(g1, (int)g1.owner.size() / 2), 0, 0);
+    for (int k = 0; k < 2000 && !g.players[g1.humanId].spawned; ++k) { host.pumpGame(g); c1.pump(g1, mapsDir); nap(); }
+    host.broadcast(g, true);
+    for (int k = 0; k < 500 && !g2.players[g1.humanId].spawned; ++k) { host.pumpGame(g); c2.pump(g2, mapsDir); nap(); }
+    c2.sendOrder(ORD_SPAWN, freeTileFrom(g2, (int)g2.owner.size() * 2 / 3), 0, 0);
+    for (int k = 0; k < 2000 && g.spawnPhase; ++k) { host.pumpGame(g); c2.pump(g2, mapsDir); nap(); }
+    CHECK(!g.spawnPhase, "spawn orders arrive through the relay");
+
+    {   // someone who joins after the start is told so
+        ClientSession late;
+        Game d;
+        CHECK(late.connectRelay(server, port, "Yfer", "Laat", &err), err.c_str());
+        for (int k = 0; k < 3000 && late.state() != ClientSession::CLOSED; ++k) { host.pumpGame(g); late.pump(d, mapsDir); nap(); }
+        CHECK(late.state() == ClientSession::CLOSED && late.closeReason().find("al begonnen") != std::string::npos,
+              "late joiner is refused");
+        printf("  late joiner -> \"%s\"\n", late.closeReason().c_str());
+    }
+
+    const int ticks = 600;
+    auto t0 = std::chrono::steady_clock::now();
+    for (int k = 0; k < ticks; ++k) {
+        host.pumpGame(g);
+        g.step();
+        if (k % 2 == 0) host.broadcast(g, true);
+        c1.pump(g1, mapsDir);
+        c2.pump(g2, mapsDir);
+        sendRandomOrders(c1, g1, k);
+        sendRandomOrders(c2, g2, k + 7);
+        g1.changed.clear();
+        g2.changed.clear();
+        if (k % 10 == 0) nap();
+    }
+    for (int k = 0; k < 1500; ++k) {
+        host.pumpGame(g);
+        if (k % 100 == 0) host.broadcast(g, true);
+        c1.pump(g1, mapsDir);
+        c2.pump(g2, mapsDir);
+        nap();
+        if (g1.tick == g.tick && g2.tick == g.tick && g1.owner == g.owner && g2.owner == g.owner) break;
+    }
+    double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    size_t d1 = 0, d2 = 0;
+    for (size_t t = 0; t < g.owner.size(); ++t) {
+        d1 += g1.owner[t] != g.owner[t];
+        d2 += g2.owner[t] != g.owner[t];
+    }
+    CHECK(g1.tick == g.tick && g2.tick == g.tick, "clients reach the host's tick through the relay");
+    CHECK(d1 == 0 && d2 == 0, "maps are identical through the relay");
+    printf("  %d ticks through the relay in %.1f s: map diff %d/%d, client tiles %d and %d\n", ticks, secs, (int)d1, (int)d2,
+           g.players[g1.humanId].tiles, g.players[g2.humanId].tiles);
+
+    host.stop();
+    for (int k = 0; k < 3000 && c1.state() != ClientSession::CLOSED; ++k) { c1.pump(g1, mapsDir); nap(); }
+    CHECK(c1.state() == ClientSession::CLOSED, "players notice when the host stops");
+
+    // the name is free again after the host left
+    HostSession again;
+    CHECK(again.startRelay(server, port, "Yfer", &err), err.c_str());
+    for (int k = 0; k < 3000 && again.relayState() == 1; ++k) { again.pumpLobby("x", "Yfer"); nap(); }
+    CHECK(again.relayState() == 2, "room name is free again after the host left");
+    again.stop();
+
+    printf(failures ? "\n%d FAILURE(S)\n" : "\nALL RELAY TESTS PASSED\n", failures);
+    return failures ? 1 : 0;
+}
+
 int main(int argc, char** argv) {
     std::string mapsDir = argc > 1 ? argv[1] : "Resources/maps";
+    if (argc > 4 && !strcmp(argv[2], "relay")) {
+        srand(12);
+        return relayTest(mapsDir, argv[3], atoi(argv[4]));
+    }
     const int port = 47991;
     std::string err;
     srand(11);

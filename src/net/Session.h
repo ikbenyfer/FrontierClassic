@@ -25,7 +25,13 @@ class HostSession {
 public:
     bool start(int port, std::string* err);
     void stop();
-    bool running() const { return listener_.open(); }
+    // Via a relay server (see server/relay.cpp): others join by `room`, which
+    // is the host's player name. Nobody needs port forwarding or an IP address.
+    bool startRelay(const std::string& server, int port, const std::string& room, std::string* err);
+    bool viaRelay() const { return relay_; }
+    int relayState() const { return relayState_; }  // 1 connecting, 2 room is open, 3 failed
+    const std::string& relayError() const { return relayError_; }
+    bool running() const { return listener_.open() || relay_; }
     int port() const { return port_; }
     int clientCount() const;  // connected and greeted
 
@@ -59,6 +65,14 @@ private:
     uint32_t sentBuildingsHash_ = 0;
     bool namesDirty_ = true;
 
+    // relay mode
+    Conn control_;
+    bool relay_ = false, hostSent_ = false;
+    int relayState_ = 0, relayPort_ = 0;
+    unsigned lastPingMs_ = 0;
+    std::string relayError_, relayServer_, room_;
+    void pumpRelay();
+
     void acceptNew(bool reject);
     void handleOrder(Game& g, Client& c, const std::vector<uint8_t>& payload);
     void dropDead(Game* g);
@@ -69,6 +83,9 @@ public:
     enum State { IDLE, CONNECTING, LOBBY, PLAYING, CLOSED };
 
     bool connect(const std::string& host, int port, const std::string& name, std::string* err);
+    // Through a relay server: `room` is the host's player name.
+    bool connectRelay(const std::string& server, int port, const std::string& room, const std::string& name,
+                      std::string* err);
     void close();
     State state() const { return state_; }
     const std::string& closeReason() const { return reason_; }

@@ -155,6 +155,12 @@ static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& di
     app.setPlayerName("Yfer");
     app.screen = SCR_NAME;
     shot(app, win, dir + "/15b_name.bmp");
+    app.setServer("mijnnas.synology.me", true);
+    app.screen = SCR_MP;
+    shot(app, win, dir + "/15c_multiplayer_server.bmp");
+    app.screen = SCR_JOIN;
+    shot(app, win, dir + "/16b_join_server.bmp");
+    app.setServer("", false);
     app.screen = SCR_MP;
     shot(app, win, dir + "/15_multiplayer.bmp");
     app.screen = SCR_JOIN;

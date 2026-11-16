@@ -48,8 +48,79 @@ void HostSession::stop() {
     }
     clients_.clear();
     listener_.close();
+    control_.close();
+    relay_ = false;
+    relayState_ = 0;
     inGame_ = false;
     sentOwner_.clear();
+}
+
+bool HostSession::startRelay(const std::string& server, int port, const std::string& room, std::string* err) {
+    stop();
+    relayError_.clear();
+    if (!control_.connectTo(server, port, err)) return false;
+    relay_ = true;
+    relayState_ = 1;
+    hostSent_ = false;
+    relayServer_ = server;
+    relayPort_ = port;
+    room_ = room;
+    port_ = port;
+    inGame_ = false;
+    lastLobbyCount_ = -1;
+    return true;
+}
+
+void HostSession::pumpRelay() {
+    if (!relay_) return;
+    control_.pump();
+    if (control_.ready() && !hostSent_) {
+        Writer w;
+        w.u16(1);
+        w.str(room_);
+        control_.send(100, w.b);  // HOST
+        control_.pump();
+        hostSent_ = true;
+        lastPingMs_ = netNowMs();
+    }
+    uint8_t type;
+    std::vector<uint8_t> payload;
+    while (control_.next(type, payload)) {
+        Reader r(payload);
+        if (type == 110) {  // room is open
+            relayState_ = 2;
+        } else if (type == MSG_BYE) {
+            relayError_ = r.str();
+            relayState_ = 3;
+            control_.close();
+            break;
+        } else if (type == 111) {  // someone wants to join: open a data connection for them
+            uint32_t token = r.u32();
+            bool full = (int)clients_.size() >= kMaxClients;
+            std::unique_ptr<Client> c(new Client());
+            std::string e;
+            if (inGame_ || full || !c->conn.connectTo(relayServer_, relayPort_, &e)) {
+                Writer w;
+                w.u32(token);
+                w.str(inGame_ ? "Dit spel is al begonnen" : "Het spel is vol");
+                control_.send(105, w.b);  // REFUSE
+            } else {
+                Writer w;
+                w.u32(token);
+                c->conn.send(102, w.b);  // ACCEPT (sent as soon as the connection is up)
+                clients_.push_back(std::move(c));
+            }
+        }
+    }
+    if (!control_.open() && relayState_ != 3) {
+        relayState_ = 3;
+        relayError_ = hostSent_ ? "Verbinding met de server verbroken" : "Server niet bereikbaar (adres of poort fout?)";
+    }
+    if (control_.ready() && netNowMs() - lastPingMs_ > 15000) {
+        lastPingMs_ = netNowMs();
+        control_.send(104, std::vector<uint8_t>());  // PING
+    }
+    control_.pump();
 }
 
 int HostSession::clientCount() const {
@@ -114,6 +185,7 @@ std::vector<std::string> HostSession::lobbyNames(const std::string& hostName) co
 
 void HostSession::pumpLobby(const std::string& info, const std::string& hostName) {
     if (!running()) return;
+    pumpRelay();
     acceptNew(false);
     for (size_t k = 0; k < clients_.size(); ++k) {
         Client& c = *clients_[k];
@@ -239,6 +311,7 @@ void HostSession::handleOrder(Game& g, Client& c, const std::vector<uint8_t>& pa
 
 void HostSession::pumpGame(Game& g) {
     if (!running()) return;
+    pumpRelay();
     acceptNew(true);
     for (size_t k = 0; k < clients_.size(); ++k) {
         Client& c = *clients_[k];
@@ -392,6 +465,15 @@ bool ClientSession::connect(const std::string& host, int port, const std::string
     helloSent_ = false;
     slot_ = count_ = 0;
     info_.clear();
+    return true;
+}
+
+bool ClientSession::connectRelay(const std::string& server, int port, const std::string& room, const std::string& name,
+                                 std::string* err) {
+    if (!connect(server, port, name, err)) return false;
+    Writer w;
+    w.str(room);
+    conn_.send(101, w.b);  // JOIN: goes out first, before our hello to the host
     return true;
 }
 
