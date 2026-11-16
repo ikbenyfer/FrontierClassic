@@ -38,10 +38,11 @@
 #include <string>
 #include <vector>
 
-static const size_t kMaxConnections = 400;
+static const size_t kMaxConnections = 200;
 static const size_t kMaxRooms = 100;
 static const size_t kMaxHandshake = 512;             // bytes before a connection must have said what it is
-static const size_t kMaxBuffered = 8u * 1024 * 1024; // per connection (a full game state is < 1 MB)
+static const size_t kMaxBuffered = 4u * 1024 * 1024; // per connection (a full game state is < 1 MB)
+static const size_t kMaxTotalBuffered = 96u * 1024 * 1024; // all connections together: the server never grows past ~100 MB
 static const int kHandshakeSeconds = 15;
 static const int kJoinWaitSeconds = 25;
 static const int kHostSilenceSeconds = 90;           // the host pings every 15 s
@@ -135,6 +136,13 @@ static std::string roomKey(const std::string& name) {
 }
 
 static void closeConn(int fd);
+
+static size_t totalBuffered() {
+    size_t n = 0;
+    for (std::map<int, Conn>::const_iterator it = conns.begin(); it != conns.end(); ++it)
+        n += it->second.in.size() + it->second.out.size();
+    return n;
+}
 
 static void dropWaiting(Conn& c) {
     if (c.kind == K_WAITING) waiting.erase(c.token);
@@ -279,6 +287,12 @@ static void onData(Conn& c) {
         case K_PIPED: {
             std::map<int, Conn>::iterator p = conns.find(c.peer);
             if (p == conns.end()) { c.in.clear(); c.closing = true; break; }
+            if (totalBuffered() + c.in.size() > kMaxTotalBuffered) {  // server memory is full: drop this game
+                c.in.clear();
+                c.closing = true;
+                p->second.closing = true;
+                break;
+            }
             totalBytes += c.in.size();
             p->second.out += c.in;
             c.in.clear();

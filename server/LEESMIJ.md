@@ -12,7 +12,7 @@ De server kijkt niet in de speldata, slaat niets op schijf op en heeft geen acco
 - Een adres waarop de NAS van buiten bereikbaar is: je publieke IP-adres, of beter een DDNS-naam
   (bijv. Synology: Configuratiescherm > Externe toegang > DDNS, je krijgt dan iets als `mijnnas.synology.me`).
 
-Gebruik: ongeveer **1-3 MB RAM** (de limiet in `docker-compose.yml` staat ruim op 64 MB), bijna geen CPU,
+Gebruik: ongeveer **1-4 MB RAM** (de server begrenst zichzelf op maximaal ~100 MB), bijna geen CPU,
 image van ongeveer 1 MB. Al het spelverkeer loopt via je NAS: reken op enkele tot tientallen kB/s per speler.
 
 ## Starten
@@ -86,8 +86,8 @@ docker image rm frontier-relay      # image verwijderen
 
 ## Veiligheid
 
-- De container draait zonder rechten (als gebruiker nobody, in een lege image, alleen-lezen bestandssysteem) en met een geheugenlimiet.
-- Er staat alleen deze ene poort open. De server accepteert maximaal 400 verbindingen en 100 spellen tegelijk
+- De container draait zonder rechten (als gebruiker nobody, in een lege image, alleen-lezen bestandssysteem). De server begrenst zijn eigen geheugen.
+- Er staat alleen deze ene poort open. De server accepteert maximaal 200 verbindingen en 100 spellen tegelijk
   en verbreekt verbindingen die zich niet binnen 15 seconden melden.
 - Iedereen die het adres kent en een hostnaam raadt, kan proberen mee te doen in een open lobby.
   De host ziet in de lobby wie er binnen is en start pas als het klopt.
