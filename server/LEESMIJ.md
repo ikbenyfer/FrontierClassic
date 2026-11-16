@@ -86,7 +86,7 @@ docker image rm frontier-relay      # image verwijderen
 
 ## Veiligheid
 
-- De container draait zonder rechten (geen root, alleen-lezen bestandssysteem, geen extra capabilities) en met een geheugenlimiet.
+- De container draait zonder rechten (als gebruiker nobody, in een lege image, alleen-lezen bestandssysteem) en met een geheugenlimiet.
 - Er staat alleen deze ene poort open. De server accepteert maximaal 400 verbindingen en 100 spellen tegelijk
   en verbreekt verbindingen die zich niet binnen 15 seconden melden.
 - Iedereen die het adres kent en een hostnaam raadt, kan proberen mee te doen in een open lobby.

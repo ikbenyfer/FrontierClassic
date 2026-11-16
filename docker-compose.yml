@@ -14,10 +14,8 @@ services:
     mem_limit: 64m            # it normally uses only a few MB
     cpus: 0.5
     read_only: true           # the server writes nothing to disk
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+    # no cap_drop / security_opt: Portainer refuses those for non-admin users, and they add
+    # nothing here: the server already runs as user "nobody" in an empty image (see Dockerfile)
     logging:
       driver: json-file
       options:
