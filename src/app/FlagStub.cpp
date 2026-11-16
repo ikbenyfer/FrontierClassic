@@ -3,7 +3,7 @@
 #include "SDL_platform.h"
 #include "Flag.h"
 
-#if !defined(__IPHONEOS__)
+#if !defined(__IPHONEOS__) && !defined(_WIN32)
 unsigned char* fc_flag_decode(const char* path, int maxSide, int* w, int* h) {
     (void)path; (void)maxSide; (void)w; (void)h;
     return NULL;

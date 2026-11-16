@@ -1,0 +1,22 @@
+Frontier Classic voor Windows
+=============================
+
+Starten: dubbelklik op FrontierClassic.exe (de map Resources moet ernaast blijven staan).
+Windows kan de eerste keer waarschuwen dat de uitgever onbekend is: kies "Meer informatie" > "Toch uitvoeren".
+
+Besturing
+- Linkermuisknop: tikken / slepen om de kaart te verschuiven
+- Muiswiel: zoomen
+- F11: volledig scherm
+- Esc: menu
+
+Multiplayer (iPad en Windows door elkaar, tot 8 spelers)
+- Host: Multiplayer > Spel hosten > instellingen kiezen > Open lobby > Start spel.
+  Stuur in je router de TCP-poort (standaard 47800) door naar de pc of iPad die host
+  (port forwarding) en sta het spel toe in de Windows-firewall als daarom gevraagd wordt.
+  Geef je publieke IP-adres en de poort aan je medespelers.
+- Meedoen: Multiplayer > Meedoen > IP-adres en poort van de host invullen > Verbinden.
+- Thuis op hetzelfde netwerk gebruik je het lokale adres dat in de lobby van de host staat.
+
+Singleplayer werkt volledig offline. Het spel gebruikt internet alleen voor multiplayer.
+Opgeslagen spellen en je vlag staan in %APPDATA%\YF\FrontierClassic.

@@ -133,6 +133,7 @@ JVal Game::toJson() const {
         o.push(events[k].text);
         o.push(events[k].tick);
         o.push((double)events[k].color);
+        o.push(events[k].player);
         ev.push(o);
     }
     j.set("events", ev);
@@ -252,6 +253,8 @@ bool Game::fromJson(const JVal& j, const std::string& mapsDir, std::string* err)
         e.text = ev[k][0].str("");
         e.tick = ev[k][1].i();
         e.color = (uint32_t)ev[k][2].num(0xffffff);
+        e.player = ev[k][3].i(0);
+        e.seq = ++eventSeq;
         events.push_back(e);
     }
     return true;

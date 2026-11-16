@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 #include "../core/Game.h"
+#include "../net/Session.h"
 #include "Gfx.h"
 #include "SDL.h"
 
 namespace fc {
 
-enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG };
+enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY };
+enum NetMode { NET_OFF, NET_HOST, NET_CLIENT };
 enum Overlay { OV_NONE, OV_PAUSE, OV_GAMEOVER };
 
 class App {
@@ -18,7 +20,19 @@ public:
     void shutdown();
     void handleEvent(const SDL_Event& e);
     void update(double dtSeconds);
-    void render(int winW, int winH, int drawW, int drawH);
+    // vpX/vpY: where the picture starts inside the window (letterboxing on desktop)
+    void render(int winW, int winH, int drawW, int drawH, int vpX = 0, int vpY = 0);
+    // desktop: window pixels -> logical 1024x768 coordinates
+    void setPointerTransform(float scale, float offX, float offY) { ptrScale_ = scale; ptrOffX_ = offX; ptrOffY_ = offY; }
+
+    // ---- multiplayer (the only part that uses the network) ----
+    NetMode netMode() const { return netMode_; }
+    bool hostLobby(int port, std::string* err);       // open a lobby with newSettings
+    bool hostStart();                                  // start the game for everyone in the lobby
+    bool joinGame(const std::string& ip, int port, std::string* err);
+    void leaveMultiplayer();
+    HostSession& hostSession() { return host_; }
+    ClientSession& clientSession() { return client_; }
     void autosave();
     bool quitRequested() const { return quit_; }
 
@@ -69,6 +83,29 @@ private:
     double simAcc_ = 0;
     bool gameOverSeen_ = false;
     bool uiLocked_ = false;
+    bool wasSpawned_ = false;
+    float ptrScale_ = 1, ptrOffX_ = 0, ptrOffY_ = 0;
+
+    // multiplayer
+    NetMode netMode_ = NET_OFF;
+    HostSession host_;
+    ClientSession client_;
+    bool mpSetup_ = false;          // "new game" screen is being used to set up a hosted game
+    std::string joinIp_, portText_ = "47800";
+    int field_ = 0;                 // join screen: 0 = IP, 1 = port
+    void enterGameScreen();
+    std::string lobbyInfo() const;
+    int portNumber() const;
+    void keypad(float x, float y, std::string& target, size_t maxLen, bool dot);
+    void typeChar(char c);
+    void renderMP();
+    void renderJoin();
+    void renderLobby();
+    void actSpawn(int tile);
+    void actAttack(int tile);
+    void actBuild(int type, int tile);
+    void actUpgrade(int buildingIndex);
+    void actRecruit();
     bool saveOk_ = false;
     bool musicOn_ = true;
     std::string toast_;

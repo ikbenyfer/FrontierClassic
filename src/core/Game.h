@@ -56,6 +56,7 @@ struct Settings {
     int winPercent = 80;     // percent of land needed to win (FFA/Teams/Custom)
     int troopSpeed = 100;    // percent
     bool aiAttacks = true;   // sandbox: AI may be peaceful
+    int numHumans = 1;       // multiplayer: players 1..numHumans are people
     unsigned seed = 12345;
 
     bool teamsEnabled() const { return mode == MODE_TEAMS || (mode == MODE_CUSTOM && customTeams); }
@@ -105,6 +106,8 @@ struct GameEvent {
     std::string text;
     int tick;
     uint32_t color;
+    int player;    // 0 = for everyone, else only for this player
+    unsigned seq;  // running number (multiplayer: which events were already sent)
 };
 
 struct Cost {
@@ -134,7 +137,13 @@ public:
 
     // ---- setup ----
     bool newGame(const Settings& s, const std::string& mapsDir, std::string* err);
-    bool spawnHuman(int tile);
+    bool spawnHuman(int tile) { return spawnPlayer(humanId, tile); }
+    bool spawnPlayer(int p, int tile);   // the game starts when every human has spawned
+    void autoSpawnRemaining();           // random start for humans who did not choose
+    void makeAI(int p);                  // a player who left is taken over by the AI
+    bool isHuman(int p) const { return p > 0 && p < (int)players.size() && players[p].human; }
+    bool eventVisible(const GameEvent& e) const { return e.player == 0 || e.player == humanId; }
+    unsigned eventSeq = 0;
     bool canSpawnAt(int tile) const;
 
     // ---- simulation ----
@@ -147,7 +156,7 @@ public:
     bool build(int p, int type, int tile, std::string* why);
     bool upgrade(int p, int buildingIndex, std::string* why);
     bool recruit(int p, std::string* why);
-    Cost buildCost(int type) const;
+    Cost buildCost(int p, int type) const;
     Cost upgradeCost(const Building& b) const;
     int buildingAt(int tile) const;  // index or -1
     bool canBuildHere(int p, int type, int tile, std::string* why) const;
@@ -189,9 +198,12 @@ private:
     void spawnAt(int p, int x, int y, int radius);
     void setOwner(int tile, int p);
     void eliminate(int p);
+public:
     void addEvent(const std::string& text, uint32_t color);
-    void recomputeTerritory();  // tiles, bbox, centre, adjacency
+    void addEventFor(int p, const std::string& text, uint32_t color);  // only if p is a human
     void recomputeBuildingLevels();
+private:
+    void recomputeTerritory();  // tiles, bbox, centre, adjacency
     void growPlayers();
     void stepAttacks();
     void stepBoats();

@@ -120,6 +120,7 @@ JVal Settings::toJson() const {
     j.set("winPercent", winPercent);
     j.set("troopSpeed", troopSpeed);
     j.set("aiAttacks", aiAttacks);
+    j.set("numHumans", numHumans);
     j.set("seed", (double)seed);
     return j;
 }
@@ -137,6 +138,7 @@ void Settings::fromJson(const JVal& j) {
     winPercent = clampi(j["winPercent"].i(80), 10, 100);
     troopSpeed = clampi(j["troopSpeed"].i(100), 25, 400);
     aiAttacks = j["aiAttacks"].boolean(true);
+    numHumans = clampi(j["numHumans"].i(1), 1, 8);
     seed = (unsigned)j["seed"].num(12345);
 }
 
@@ -172,24 +174,30 @@ static uint32_t shade(uint32_t c, double f) {
 
 void Game::setupPlayers() {
     int n = settings.numAI;
-    players.assign(n + 2, Player());
+    const int nh = settings.numHumans;
+    players.assign(n + nh + 1, Player());
     players[0].name = "Niemand";
     players[0].alive = false;
     players[0].color = 0x888888;
     humanId = 1;
-    Player& me = players[1];
-    me.name = "Jij";
-    me.human = true;
-    me.color = kHumanColor;
+    static const uint32_t humanColors[8] = {kHumanColor, 0xFF3B30, 0x34C759, 0xFFCC00, 0xAF52DE, 0xFF9500, 0x00C7BE, 0xFF2D95};
+    for (int h = 1; h <= nh; ++h) {
+        Player& me = players[h];
+        char nm[24];
+        snprintf(nm, sizeof nm, "Speler %d", h);
+        me.name = nh == 1 ? "Jij" : nm;
+        me.human = true;
+        me.color = humanColors[(h - 1) % 8];
+    }
 
     // Nation names: shuffle the largest nations a bit so games differ.
     std::vector<int> order;
     int pool = std::min((int)map.nations.size(), std::max(n + n / 2, n));
     for (int k = 0; k < pool; ++k) order.push_back(k);
     for (int k = pool - 1; k > 0; --k) std::swap(order[k], order[randInt(k + 1)]);
-    for (int p = 2; p < (int)players.size(); ++p) {
+    for (int p = nh + 1; p < (int)players.size(); ++p) {
         Player& pl = players[p];
-        int k = p - 2;
+        int k = p - nh - 1;
         if (k < (int)order.size()) {
             pl.name = map.nations[order[k]].name;
         } else {
@@ -207,7 +215,8 @@ void Game::setupPlayers() {
         for (int p = 1; p < (int)players.size(); ++p) {
             players[p].team = (p - 1) % t;
             double f = 0.75 + 0.5 * ((p * 37) % 11) / 10.0;
-            players[p].color = p == humanId ? kTeamColors[players[p].team] : shade(kTeamColors[players[p].team], f);
+            if (!(nh > 1 && players[p].human))  // multiplayer: people keep their own colour
+                players[p].color = p == humanId ? kTeamColors[players[p].team] : shade(kTeamColors[players[p].team], f);
         }
     } else {
         for (int p = 1; p < (int)players.size(); ++p) players[p].team = p;  // everyone alone
@@ -217,15 +226,18 @@ void Game::setupPlayers() {
         players[p].gold = settings.startGold;
         players[p].materials = 50;
     }
-    if (settings.mode == MODE_SANDBOX) {
-        me.gold = 1000000;
-        me.materials = 100000;
-    }
+    if (settings.mode == MODE_SANDBOX)
+        for (int h = 1; h <= nh; ++h) {
+            players[h].gold = 1000000;
+            players[h].materials = 100000;
+        }
 }
 
 bool Game::newGame(const Settings& s, const std::string& mapsDir, std::string* err) {
     settings = s;
     settings.numAI = clampi(settings.numAI, 1, 50);
+    settings.numHumans = clampi(settings.numHumans, 1, 8);
+    eventSeq = 0;
     if (!map.load(mapsDir, settings.mapId, err)) return false;
     rng = settings.seed ? settings.seed : 1;
     for (int k = 0; k < 8; ++k) rand32();
@@ -249,7 +261,7 @@ bool Game::newGame(const Settings& s, const std::string& mapsDir, std::string* e
     setupPlayers();
 
     // Spawn the AI nations at their own country (or a random free spot).
-    for (int p = 2; p < (int)players.size(); ++p) {
+    for (int p = settings.numHumans + 1; p < (int)players.size(); ++p) {
         int sx = -1, sy = -1;
         for (size_t k = 0; k < map.nations.size(); ++k) {
             const Nation& nat = map.nations[k];
@@ -302,20 +314,71 @@ void Game::spawnAt(int p, int x, int y, int radius) {
     pl.cy = (float)y;
 }
 
-bool Game::spawnHuman(int tile) {
-    if (!spawnPhase || !canSpawnAt(tile)) return false;
-    spawnAt(humanId, tile % map.w, tile / map.w, 4);
-    if (settings.mode == MODE_SANDBOX) players[humanId].troops = 20000;
-    spawnPhase = false;
-    recomputeTerritory();
-    addEvent("Veel succes! Tik op een gebied naast je om aan te vallen.", 0xFFFFFF);
+bool Game::spawnPlayer(int p, int tile) {
+    if (!spawnPhase || !isHuman(p) || players[p].spawned || !canSpawnAt(tile)) return false;
+    spawnAt(p, tile % map.w, tile / map.w, 4);
+    if (settings.mode == MODE_SANDBOX) players[p].troops = 20000;
+    bool all = true;
+    for (size_t q = 1; q < players.size(); ++q)
+        if (players[q].human && !players[q].spawned) all = false;
+    if (all) {
+        spawnPhase = false;
+        recomputeTerritory();
+        addEvent("Veel succes! Tik op een gebied naast je om aan te vallen.", 0xFFFFFF);
+    } else {
+        addEventFor(p, "Wachten op de andere spelers...", 0xFFFFFF);
+    }
     return true;
+}
+
+void Game::autoSpawnRemaining() {
+    for (size_t q = 1; q < players.size() && spawnPhase; ++q) {
+        if (!players[q].human || players[q].spawned) continue;
+        for (int tries = 0; tries < 5000; ++tries)
+            if (spawnPlayer((int)q, randInt(map.w * map.h))) break;
+        if (!players[q].spawned) makeAI((int)q);
+    }
+    // nobody left to wait for
+    bool waiting = false;
+    for (size_t q = 1; q < players.size(); ++q)
+        if (players[q].human && !players[q].spawned) waiting = true;
+    if (!waiting && spawnPhase) {
+        spawnPhase = false;
+        recomputeTerritory();
+    }
+}
+
+void Game::makeAI(int p) {
+    if (!isHuman(p)) return;
+    Player& pl = players[p];
+    pl.human = false;
+    pl.name += " (AI)";
+    pl.nextThink = tick + 10;
+    if (!pl.spawned) {
+        pl.alive = false;
+        // do not keep the others waiting in the spawn phase
+        bool waiting = false, any = false;
+        for (size_t q = 1; q < players.size(); ++q)
+            if (players[q].human) { any = true; if (!players[q].spawned) waiting = true; }
+        if (any && !waiting && spawnPhase) {
+            spawnPhase = false;
+            recomputeTerritory();
+        }
+    }
 }
 
 // ------------------------------------------------------------------ helpers
 
+void Game::addEventFor(int p, const std::string& text, uint32_t color) {
+    if (!isHuman(p)) return;
+    addEvent(text, color);
+    events.back().player = p;
+}
+
 void Game::addEvent(const std::string& text, uint32_t color) {
     GameEvent e;
+    e.player = 0;
+    e.seq = ++eventSeq;
     e.text = text;
     e.tick = tick;
     e.color = color;
@@ -366,12 +429,12 @@ void Game::setOwner(int t, int p) {
         int b = buildingAt(t);
         if (b >= 0) {
             if (p == 0 || buildings[b].type == B_FORT) {
-                if (old == humanId) addEvent(std::string(buildingName(buildings[b].type)) + " verwoest!", 0xFF7766);
+                addEventFor(old, std::string(buildingName(buildings[b].type)) + " verwoest!", 0xFF7766);
                 buildings.erase(buildings.begin() + b);
                 hasBuilding[t] = 0;
             } else {
-                if (old == humanId) addEvent(std::string(buildingName(buildings[b].type)) + " veroverd door " + players[p].name, 0xFF7766);
-                if (p == humanId) addEvent(std::string(buildingName(buildings[b].type)) + " veroverd!", 0x88FF88);
+                addEventFor(old, std::string(buildingName(buildings[b].type)) + " veroverd door " + players[p].name, 0xFF7766);
+                addEventFor(p, std::string(buildingName(buildings[b].type)) + " veroverd!", 0x88FF88);
                 buildings[b].owner = p;
             }
         }
@@ -392,8 +455,8 @@ void Game::eliminate(int p) {
         if (attacks[k].active && attacks[k].attacker == p) attacks[k].active = false;
     for (size_t k = 0; k < boats.size(); ++k)
         if (boats[k].active && boats[k].owner == p) boats[k].active = false;
-    if (p == humanId) addEvent("Je bent verslagen!", 0xFF5555);
-    else addEvent(pl.name + " is verslagen", 0xCCCCCC);
+    addEvent(pl.name + " is verslagen", 0xCCCCCC);
+    addEventFor(p, "Je bent verslagen!", 0xFF5555);
 }
 
 void Game::recomputeTerritory() {
@@ -470,7 +533,7 @@ static double aiMul(const Game& g, int p) {
 double Game::maxTroops(int p) const {
     const Player& pl = players[p];
     double m = (2500.0 + pl.tiles * 22.0 + 10000.0 * pl.cityLevels) * aiMul(*this, p);
-    if (settings.mode == MODE_SANDBOX && p == humanId) m *= 5;
+    if (settings.mode == MODE_SANDBOX && pl.human) m *= 5;
     return m;
 }
 
@@ -478,7 +541,7 @@ double Game::troopGrowth(int p) const {
     const Player& pl = players[p];
     double base = 10.0 + std::pow((double)pl.tiles, 0.62) * 3.5 + pl.cityLevels * 25.0;
     base *= settings.troopSpeed / 100.0 * aiMul(*this, p);
-    if (settings.mode == MODE_SANDBOX && p == humanId) base *= 5;
+    if (settings.mode == MODE_SANDBOX && pl.human) base *= 5;
     double mx = maxTroops(p);
     if (pl.troops >= mx) return 0;
     return base * (1.0 - 0.7 * pl.troops / mx);
@@ -511,10 +574,10 @@ void Game::growPlayers() {
 static const double kBuildGold[B_COUNT] = {3000, 2000, 1500, 2500};
 static const double kBuildMat[B_COUNT] = {50, 0, 0, 150};
 
-Cost Game::buildCost(int type) const {
-    int count = 0;
-    for (size_t k = 0; k < buildings.size(); ++k)
-        if (buildings[k].owner == humanId && buildings[k].type == type) ++count;
+Cost Game::buildCost(int p, int type) const {
+    int count = 0;  // people pay more for each building of a type they already own; the AI pays the base price
+    for (size_t k = 0; isHuman(p) && k < buildings.size(); ++k)
+        if (buildings[k].owner == p && buildings[k].type == type) ++count;
     Cost c = {kBuildGold[type] * (1.0 + 0.25 * count), kBuildMat[type]};
     return c;
 }
@@ -557,8 +620,7 @@ bool Game::build(int p, int type, int tile, std::string* why) {
     if (type < 0 || type >= B_COUNT || over || spawnPhase) return false;
     if (!canBuildHere(p, type, tile, why)) return false;
     Player& pl = players[p];
-    Cost c = buildCost(type);
-    if (p != humanId) { c.gold = kBuildGold[type]; c.materials = kBuildMat[type]; }
+    Cost c = buildCost(p, type);
     if (pl.gold < c.gold || pl.materials < c.materials) {
         if (why) *why = "Niet genoeg goud of grondstoffen";
         return false;
@@ -573,7 +635,7 @@ bool Game::build(int p, int type, int tile, std::string* why) {
     buildings.push_back(b);
     hasBuilding[tile] = 1;
     recomputeBuildingLevels();
-    if (p == humanId) addEvent(std::string(buildingName(type)) + " gebouwd", 0x88FF88);
+    addEventFor(p, std::string(buildingName(type)) + " gebouwd", 0x88FF88);
     return true;
 }
 
@@ -594,7 +656,7 @@ bool Game::upgrade(int p, int bi, std::string* why) {
     pl.materials -= c.materials;
     b.level++;
     recomputeBuildingLevels();
-    if (p == humanId) addEvent(std::string(buildingName(b.type)) + " verbeterd", 0x88FF88);
+    addEventFor(p, std::string(buildingName(b.type)) + " verbeterd", 0x88FF88);
     return true;
 }
 
@@ -718,7 +780,7 @@ int Game::startAttack(int att, int target, double troops, int aimTile, bool from
         if (troops < 1) return -1;
         players[target].lastAttackedBy = att;
         players[target].lastAttackedTick = tick;
-        if (target == humanId) addEvent(ap.name + " valt je aan!", 0xFF7766);
+        addEventFor(target, ap.name + " valt je aan!", 0xFF7766);
     }
     tmp.troops = troops;
     for (size_t k = 0; k < attacks.size(); ++k) {
@@ -780,7 +842,7 @@ void Game::stepAttack(Attack& a) {
             // attack runs out of steam: survivors go home
             ap.troops += a.troops;
             a.active = false;
-            if (a.attacker == humanId && conquered == 0) addEvent("Aanval gestopt: te weinig troepen", 0xFFCC66);
+            if (conquered == 0) addEventFor(a.attacker, "Aanval gestopt: te weinig troepen", 0xFFCC66);
             return;
         }
         a.troops -= cost;
@@ -908,8 +970,8 @@ bool Game::launchBoat(int p, int tile, double troops, std::string* why) {
     b->target = target;
     b->pos = 0;
     b->path.swap(path);
-    if (p == humanId) addEvent("Schip vertrekt", 0xAADDFF);
-    else if (want == humanId) addEvent(pl.name + " stuurt een schip naar je toe!", 0xFF7766);
+    addEventFor(p, "Schip vertrekt", 0xAADDFF);
+    if (want != p) addEventFor(want, pl.name + " stuurt een schip naar je toe!", 0xFF7766);
     return true;
 }
 
@@ -925,7 +987,7 @@ void Game::landBoat(Boat& b) {
     }
     double cost = tileCost(b.target, t);
     if (b.troops <= cost) {
-        if (p == humanId) addEvent("Landing mislukt", 0xFFCC66);
+        addEventFor(p, "Landing mislukt", 0xFFCC66);
         return;
     }
     b.troops -= cost;
@@ -1115,8 +1177,10 @@ int Game::rankOf(int p) const {
 void Game::checkWin() {
     if (over) return;
     int land = std::max(1, map.landTiles);
-    const Player& me = players[humanId];
-    if (!me.alive && me.spawned) {
+    bool humanLeft = false;  // is any person still in the game?
+    for (size_t p = 1; p < players.size(); ++p)
+        if (players[p].human && (players[p].alive || !players[p].spawned)) humanLeft = true;
+    if (!humanLeft) {
         over = true;
         // who is doing best?
         int best = 0;
@@ -1161,17 +1225,19 @@ void Game::step() {
     stepAttacks();
     stepBoats();
     if (tick % 20 == 0) recomputeTerritory();
-    for (size_t p = 2; p < players.size(); ++p) {
+    for (size_t p = 1; p < players.size(); ++p) {
         Player& pl = players[p];
-        if (pl.alive && pl.spawned && tick >= pl.nextThink) aiThink((int)p);
+        if (!pl.human && pl.alive && pl.spawned && tick >= pl.nextThink) aiThink((int)p);
     }
     if (tick % 10 == 0) {
         bool wasOver = over;
         checkWin();
         if (over && !wasOver) {
-            bool won = winnerPlayer == humanId ||
-                       (settings.teamsEnabled() && winnerTeam >= 0 && winnerTeam == players[humanId].team);
-            addEvent(won ? "Gewonnen!" : "Spel voorbij", won ? 0x88FF88 : 0xFF7766);
+            for (size_t p = 1; p < players.size(); ++p) {
+                bool won = winnerPlayer == (int)p ||
+                           (settings.teamsEnabled() && winnerTeam >= 0 && winnerTeam == players[p].team);
+                addEventFor((int)p, won ? "Gewonnen!" : "Spel voorbij", won ? 0x88FF88 : 0xFF7766);
+            }
         }
     }
 }

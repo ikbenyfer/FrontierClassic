@@ -57,6 +57,8 @@ void App::saveSettings() {
     j.set("newGame", newSettings.toJson());
     j.set("attackIdx", attackIdx_);
     j.set("music", musicOn_);
+    j.set("joinIp", joinIp_);
+    j.set("port", portText_);
     writeFileAtomic(saveDir_ + "settings.json", j.dump());
 }
 
@@ -67,6 +69,10 @@ void App::loadSettings() {
         newSettings.fromJson(j["newGame"]);
         attackIdx_ = std::max(0, std::min(4, j["attackIdx"].i(1)));
         musicOn_ = j["music"].boolean(true);
+        joinIp_ = j["joinIp"].str("");
+        portText_ = j["port"].str("47800");
+        if (joinIp_.size() > 15) joinIp_.clear();
+        if (portText_.size() > 5) portText_ = "47800";
     }
     bool found = false;
     for (size_t k = 0; k < maps_.size(); ++k)
@@ -129,7 +135,7 @@ bool App::saveSlot(const std::string& slot) {
 }
 
 void App::autosave() {
-    if (screen == SCR_GAME && game.map.w && !game.spawnPhase) saveSlot("autosave");
+    if (netMode_ == NET_OFF && screen == SCR_GAME && game.map.w && !game.spawnPhase) saveSlot("autosave");
     lastAutosave_ = SDL_GetTicks();
 }
 
@@ -265,28 +271,33 @@ void App::handleEvent(const SDL_Event& e) {
             if (e.button.which == SDL_TOUCH_MOUSEID || e.button.button != SDL_BUTTON_LEFT) break;
             mouseDown_ = true;
             multi_ = false;
-            pointerDown((float)e.button.x, (float)e.button.y);
+            pointerDown((e.button.x - ptrOffX_) * ptrScale_, (e.button.y - ptrOffY_) * ptrScale_);
             break;
         case SDL_MOUSEMOTION:
             if (e.motion.which == SDL_TOUCH_MOUSEID || !mouseDown_) break;
-            pointerMove((float)e.motion.x, (float)e.motion.y, (float)e.motion.xrel, (float)e.motion.yrel);
+            pointerMove((e.motion.x - ptrOffX_) * ptrScale_, (e.motion.y - ptrOffY_) * ptrScale_,
+                        e.motion.xrel * ptrScale_, e.motion.yrel * ptrScale_);
             break;
         case SDL_MOUSEBUTTONUP:
             if (e.button.which == SDL_TOUCH_MOUSEID || e.button.button != SDL_BUTTON_LEFT) break;
             mouseDown_ = false;
-            pointerUp((float)e.button.x, (float)e.button.y);
+            pointerUp((e.button.x - ptrOffX_) * ptrScale_, (e.button.y - ptrOffY_) * ptrScale_);
             break;
         case SDL_MOUSEWHEEL:
             if (screen == SCR_GAME && overlay == OV_NONE && e.wheel.which != SDL_TOUCH_MOUSEID) {
                 int mx, my;
                 SDL_GetMouseState(&mx, &my);
-                zoomAt((float)mx, (float)my, e.wheel.y > 0 ? 1.2f : 1 / 1.2f);
+                zoomAt((mx - ptrOffX_) * ptrScale_, (my - ptrOffY_) * ptrScale_, e.wheel.y > 0 ? 1.2f : 1 / 1.2f);
             }
             break;
+        case SDL_TEXTINPUT:
+            for (const char* c = e.text.text; *c; ++c) typeChar(*c);
+            break;
         case SDL_KEYDOWN:
+            if (e.key.keysym.sym == SDLK_BACKSPACE) typeChar('\b');
             if (e.key.keysym.sym == SDLK_ESCAPE || e.key.keysym.sym == SDLK_AC_BACK) {
                 if (screen == SCR_GAME) overlay = overlay == OV_PAUSE ? OV_NONE : OV_PAUSE;
-                else if (screen != SCR_MENU) screen = SCR_MENU;
+                else if (screen != SCR_MENU && screen != SCR_LOBBY) screen = SCR_MENU;
             }
             break;
         default:
@@ -341,34 +352,321 @@ void App::showToast(const std::string& s) {
 // ------------------------------------------------------------------ update
 
 void App::update(double dt) {
-    if (screen != SCR_GAME || overlay != OV_NONE || game.spawnPhase) {
+    // ---- multiplayer plumbing
+    if (netMode_ == NET_HOST) {
+        if (screen == SCR_LOBBY) host_.pumpLobby(lobbyInfo());
+        else if (screen == SCR_GAME) host_.pumpGame(game);
+    } else if (netMode_ == NET_CLIENT) {
+        if (client_.pump(game, mapsDir_)) enterGameScreen();
+        std::string t;
+        while (client_.nextToast(t)) showToast(t);
+        if (client_.state() == ClientSession::CLOSED) {
+            std::string why = client_.closeReason();
+            leaveMultiplayer();
+            screen = SCR_MP;
+            overlay = OV_NONE;
+            showToast(why.empty() ? "Verbinding verbroken" : why);
+        }
+    }
+    if (screen != SCR_GAME || !game.map.w) {
         simAcc_ = 0;
         return;
     }
-    simAcc_ += dt * speed_;
-    int steps = 0;
-    while (simAcc_ >= 1.0 / TICKS_PER_SECOND && steps < 4) {
-        game.step();
-        simAcc_ -= 1.0 / TICKS_PER_SECOND;
-        ++steps;
+    const Player& me = game.players[game.humanId];
+    bool finished = game.over || (netMode_ != NET_OFF && me.spawned && !me.alive);
+    if (netMode_ == NET_CLIENT) {  // the host runs the simulation
+        if (finished && !gameOverSeen_) {
+            gameOverSeen_ = true;
+            overlay = OV_GAMEOVER;
+        }
+        return;
     }
-    if (steps == 4) simAcc_ = 0;  // device too slow for this speed: drop the backlog
-    if (game.over && !gameOverSeen_) {
+    // single player pauses under a menu; a hosted game keeps running
+    bool paused = netMode_ == NET_OFF && overlay != OV_NONE;
+    if (paused || game.spawnPhase) {
+        simAcc_ = 0;
+    } else {
+        simAcc_ += dt * (netMode_ == NET_HOST ? 1 : speed_);
+        int steps = 0;
+        while (simAcc_ >= 1.0 / TICKS_PER_SECOND && steps < 4) {
+            game.step();
+            simAcc_ -= 1.0 / TICKS_PER_SECOND;
+            ++steps;
+        }
+        if (steps == 4) simAcc_ = 0;  // device too slow for this speed: drop the backlog
+    }
+    if (netMode_ == NET_HOST) host_.broadcast(game);
+    if (finished && !gameOverSeen_) {
         gameOverSeen_ = true;
         overlay = OV_GAMEOVER;
         autosave();
     }
-    if (SDL_GetTicks() - lastAutosave_ > 60000) autosave();
+    if (netMode_ == NET_OFF && !paused && SDL_GetTicks() - lastAutosave_ > 60000) autosave();
+}
+
+// ------------------------------------------------------------------ multiplayer
+
+void App::enterGameScreen() {
+    gfx.setFlagOwner(game.humanId);
+    gfx.setMap(game);
+    game.changed.clear();
+    screen = SCR_GAME;
+    overlay = OV_NONE;
+    buildMode_ = -1;
+    selBuildingTile_ = -1;
+    speed_ = 1;
+    simAcc_ = 0;
+    gameOverSeen_ = false;
+    wasSpawned_ = false;
+    fitMap();
+    lastAutosave_ = SDL_GetTicks();
+}
+
+std::string App::lobbyInfo() const {
+    std::string name = newSettings.mapId;
+    for (size_t k = 0; k < maps_.size(); ++k)
+        if (maps_[k].id == newSettings.mapId) name = maps_[k].name;
+    char buf[160];
+    snprintf(buf, sizeof buf, "%s  -  %s  -  %d AI (%s)", name.c_str(), modeName(newSettings.mode), newSettings.numAI,
+             difficultyName(newSettings.difficulty));
+    return buf;
+}
+
+int App::portNumber() const {
+    int p = atoi(portText_.c_str());
+    return p >= 1024 && p <= 65535 ? p : kDefaultPort;
+}
+
+bool App::hostLobby(int port, std::string* err) {
+    leaveMultiplayer();
+    if (!host_.start(port, err)) return false;
+    netMode_ = NET_HOST;
+    screen = SCR_LOBBY;
+    return true;
+}
+
+bool App::hostStart() {
+    if (netMode_ != NET_HOST) return false;
+    Settings st = newSettings;
+    st.numHumans = 1 + host_.clientCount();
+    st.seed = (unsigned)SDL_GetTicks() * 2654435761u + 17u;
+    std::string err;
+    if (!game.newGame(st, mapsDir_, &err)) {
+        showToast(err);
+        return false;
+    }
+    host_.startGame(game);
+    enterGameScreen();
+    return true;
+}
+
+bool App::joinGame(const std::string& ip, int port, std::string* err) {
+    leaveMultiplayer();
+    if (!client_.connect(ip, port, err)) return false;
+    netMode_ = NET_CLIENT;
+    screen = SCR_LOBBY;
+    return true;
+}
+
+void App::leaveMultiplayer() {
+    if (netMode_ == NET_HOST) host_.stop();
+    if (netMode_ == NET_CLIENT) client_.close();
+    netMode_ = NET_OFF;
+}
+
+void App::actSpawn(int t) {
+    if (game.players[game.humanId].spawned) return;
+    if (netMode_ == NET_CLIENT) {
+        if (game.canSpawnAt(t)) client_.sendOrder(ORD_SPAWN, t, 0, 0);
+        else showToast("Kies vrij land (geen water of bezet gebied)");
+        return;
+    }
+    if (game.spawnHuman(t)) {
+        if (netMode_ == NET_OFF) autosave();
+    } else {
+        showToast("Kies vrij land (geen water of bezet gebied)");
+    }
+}
+
+void App::actAttack(int t) {
+    if (netMode_ == NET_CLIENT) {
+        client_.sendOrder(ORD_ATTACK, t, 0, kAttackPct[attackIdx_]);
+        return;
+    }
+    std::string why;
+    double troops = game.players[game.humanId].troops * kAttackPct[attackIdx_];
+    if (!game.orderAttack(game.humanId, t, troops, &why)) showToast(why);
+}
+
+void App::actBuild(int type, int t) {
+    if (netMode_ == NET_CLIENT) {
+        client_.sendOrder(ORD_BUILD, type, t, 0);
+        buildMode_ = -1;
+        return;
+    }
+    std::string why;
+    if (game.build(game.humanId, type, t, &why)) buildMode_ = -1;
+    else showToast(why);
+}
+
+void App::actUpgrade(int bi) {
+    if (bi < 0 || bi >= (int)game.buildings.size()) return;
+    if (netMode_ == NET_CLIENT) {
+        client_.sendOrder(ORD_UPGRADE, game.buildings[bi].tile, 0, 0);
+        return;
+    }
+    std::string why;
+    if (!game.upgrade(game.humanId, bi, &why)) showToast(why);
+}
+
+void App::actRecruit() {
+    if (netMode_ == NET_CLIENT) {
+        client_.sendOrder(ORD_RECRUIT, 0, 0, 0);
+        return;
+    }
+    std::string why;
+    if (game.recruit(game.humanId, &why)) showToast("+1500 troepen");
+    else showToast(why);
+}
+
+void App::typeChar(char c) {
+    if (screen != SCR_JOIN && screen != SCR_MP) return;
+    std::string& target = (screen == SCR_JOIN && field_ == 0) ? joinIp_ : portText_;
+    bool ip = &target == &joinIp_;
+    if (c == '\b') {
+        if (!target.empty()) target.erase(target.size() - 1);
+    } else if (((c >= '0' && c <= '9') || (ip && c == '.')) && target.size() < (ip ? 15u : 5u)) {
+        target += c;
+    }
+}
+
+void App::keypad(float x, float y, std::string& target, size_t maxLen, bool dot) {
+    static const char keys[12] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '<'};
+    for (int k = 0; k < 12; ++k) {
+        char label[2] = {keys[k], 0};
+        bool enabled = keys[k] != '.' || dot;
+        if (button(x + (k % 3) * 96.0f, y + (k / 3) * 74.0f, 88, 66, keys[k] == '<' ? "Wis" : label, false, enabled)) {
+            if (keys[k] == '<') {
+                if (!target.empty()) target.erase(target.size() - 1);
+            } else if (target.size() < maxLen) {
+                target += keys[k];
+            }
+        }
+    }
+}
+
+void App::renderMP() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 24, "Multiplayer", 40, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, 84, "Speel samen via internet: iPad en Windows door elkaar, tot 8 spelers.", 20, C_DIM, 1);
+
+    float x = 70, y = 150;
+    gfx.text(x, y, "Spel hosten", 24, C_ACCENT);
+    gfx.text(x, y + 34, "Jij start het spel. Stuur in je router de TCP-poort", 18, C_TEXT);
+    gfx.text(x, y + 58, "hiernaast door naar dit apparaat (port forwarding) en", 18, C_TEXT);
+    gfx.text(x, y + 82, "geef je publieke IP-adres + poort aan je medespelers.", 18, C_TEXT);
+    if (button(x, y + 122, 420, 70, "Spel hosten", true)) {
+        mpSetup_ = true;
+        screen = SCR_NEW;
+    }
+    y += 250;
+    gfx.text(x, y, "Meedoen", 24, C_ACCENT);
+    gfx.text(x, y + 34, "Vul het IP-adres en de poort van de host in.", 18, C_TEXT);
+    if (button(x, y + 74, 420, 70, "Meedoen met een spel", true)) {
+        field_ = 0;
+        screen = SCR_JOIN;
+    }
+
+    float kx = 640, ky = 150;
+    gfx.text(kx, ky, "Poort om te hosten", 20, C_ACCENT);
+    gfx.rect(kx, ky + 32, 280, 56, 0x1B2638FF);
+    gfx.frame(kx, ky + 32, 280, 56, 2, C_BTN_SEL);
+    gfx.text(kx + 140, ky + 44, portText_.empty() ? "47800" : portText_, 28, portText_.empty() ? C_DIM : C_TEXT, 1);
+    keypad(kx, ky + 104, portText_, 5, false);
+    gfx.text(kx, ky + 408, "Standaard: 47800 (1024 - 65535)", 16, C_DIM);
+
+    if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
+}
+
+void App::renderJoin() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 24, "Meedoen met een spel", 40, C_TEXT, 1);
+    float x = 90, y = 130;
+    gfx.text(x, y, "IP-adres van de host", 20, C_ACCENT);
+    if (button(x, y + 30, 440, 64, joinIp_.empty() ? "bijv. 84.25.130.7" : joinIp_, field_ == 0)) field_ = 0;
+    gfx.text(x, y + 120, "Poort", 20, C_ACCENT);
+    if (button(x, y + 150, 440, 64, portText_.empty() ? "47800" : portText_, field_ == 1)) field_ = 1;
+    gfx.text(x, y + 240, "Tik op een veld en gebruik de cijfertoetsen.", 18, C_DIM);
+    gfx.text(x, y + 266, "De host moet in de lobby wachten voordat je verbindt.", 18, C_DIM);
+
+    if (field_ == 0) keypad(640, 150, joinIp_, 15, true);
+    else keypad(640, 150, portText_, 5, false);
+
+    if (button(x, y + 320, 440, 76, "Verbinden", true, !joinIp_.empty())) {
+        std::string err;
+        saveSettings();
+        if (!joinGame(joinIp_, portNumber(), &err)) showToast(err);
+    }
+    if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MP;
+}
+
+void App::renderLobby() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    char buf[200];
+    if (netMode_ == NET_HOST) {
+        gfx.text(W_ * 0.5f, 24, "Lobby - jij bent de host", 40, C_TEXT, 1);
+        gfx.text(W_ * 0.5f, 86, lobbyInfo(), 20, C_DIM, 1);
+        float x = 110, y = 150;
+        snprintf(buf, sizeof buf, "Poort: %d (TCP)", host_.port());
+        gfx.text(x, y, buf, 30, C_ACCENT);
+        gfx.text(x, y + 50, "Zo kunnen anderen meedoen:", 20, C_TEXT);
+        gfx.text(x, y + 80, "1. Stuur deze poort in je router door naar dit apparaat (port forwarding).", 18, C_TEXT);
+        gfx.text(x, y + 106, "2. Geef je publieke IP-adres (zoek op: wat is mijn ip) en de poort door.", 18, C_TEXT);
+        gfx.text(x, y + 132, "3. Zij kiezen Multiplayer > Meedoen en vullen die twee in.", 18, C_TEXT);
+        std::vector<std::string> ips = netLocalAddresses();
+        std::string local;
+        for (size_t k = 0; k < ips.size() && k < 4; ++k) local += (k ? ",  " : "") + ips[k];
+        gfx.text(x, y + 176, "Adres van dit apparaat in je eigen netwerk (voor de router of thuis):", 16, C_DIM);
+        gfx.text(x, y + 200, local.empty() ? "(geen netwerk gevonden)" : local, 22, C_TEXT);
+
+        snprintf(buf, sizeof buf, "Spelers in de lobby: %d", 1 + host_.clientCount());
+        gfx.text(x, y + 260, buf, 30, C_GOOD);
+        gfx.text(x, y + 300, "Jij + iedereen die verbonden is. Lege plekken worden AI.", 18, C_DIM);
+
+        if (button(W_ - 380.0f, H_ - 90.0f, 340, 66, "Start spel", true)) hostStart();
+        if (button(40, H_ - 90.0f, 220, 66, "Annuleren")) {
+            leaveMultiplayer();
+            screen = SCR_MP;
+        }
+    } else {
+        gfx.text(W_ * 0.5f, 24, "Lobby", 40, C_TEXT, 1);
+        snprintf(buf, sizeof buf, "%s : %d", joinIp_.c_str(), portNumber());
+        gfx.text(W_ * 0.5f, 110, buf, 24, C_DIM, 1);
+        if (client_.state() == ClientSession::CONNECTING || client_.lobbyCount() == 0) {
+            gfx.text(W_ * 0.5f, 260, "Verbinden met de host...", 30, C_ACCENT, 1);
+            gfx.text(W_ * 0.5f, 310, "Lukt het niet? Controleer IP, poort en de port forwarding bij de host.", 18, C_DIM, 1);
+        } else {
+            gfx.text(W_ * 0.5f, 240, "Verbonden!", 36, C_GOOD, 1);
+            snprintf(buf, sizeof buf, "Jij bent speler %d van %d", client_.lobbySlot(), client_.lobbyCount());
+            gfx.text(W_ * 0.5f, 300, buf, 26, C_TEXT, 1);
+            gfx.text(W_ * 0.5f, 350, client_.lobbyInfo(), 20, C_DIM, 1);
+            gfx.text(W_ * 0.5f, 400, "Wachten tot de host het spel start...", 22, C_ACCENT, 1);
+        }
+        if (button(40, H_ - 90.0f, 220, 66, "Verlaten")) {
+            leaveMultiplayer();
+            screen = SCR_JOIN;
+        }
+    }
 }
 
 // ------------------------------------------------------------------ render
 
-void App::render(int winW, int winH, int drawW, int drawH) {
+void App::render(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
     W_ = winW;
     H_ = winH;
     blocks_.clear();
     if (fc_flag_picked() && loadFlag()) showToast("Je vlag is ingesteld");
-    gfx.beginFrame(winW, winH, drawW, drawH);
+    gfx.beginFrame(winW, winH, drawW, drawH, vpX, vpY);
     switch (screen) {
         case SCR_MENU: renderMenu(); break;
         case SCR_NEW: renderNew(); break;
@@ -376,6 +674,9 @@ void App::render(int winW, int winH, int drawW, int drawH) {
         case SCR_INFO: renderInfo(); break;
         case SCR_GAME: renderGame(); break;
         case SCR_FLAG: renderFlag(); break;
+        case SCR_MP: renderMP(); break;
+        case SCR_JOIN: renderJoin(); break;
+        case SCR_LOBBY: renderLobby(); break;
     }
     if (!toast_.empty() && SDL_GetTicks() < toastUntil_) {
         float w = gfx.textWidth(toast_, 20) + 40;
@@ -402,7 +703,8 @@ void App::renderMenu() {
     gfx.text(W_ * 0.5f, 110, "FRONTIER CLASSIC", 64, C_TEXT, 1);
     gfx.text(W_ * 0.5f, 186, "Verover de wereld - volledig offline", 24, C_DIM, 1);
 
-    float bw = 360, bh = 66, x = (W_ - bw) * 0.5f, y = 260;
+    float bw = 360, bh = 58, x = (W_ - bw) * 0.5f, y = 236;
+    const float gap = 12;
     bool hasAuto = false;
     {
         FILE* f = fopen(slotPath("autosave").c_str(), "rb");
@@ -414,22 +716,24 @@ void App::renderMenu() {
         if (button(x, y, bw, bh, "Doorgaan", true, true, sum)) {
             if (!loadSlot("autosave")) showToast(loadMessage_);
         }
-        y += bh + 16;
+        y += bh + gap;
     }
-    if (button(x, y, bw, bh, "Nieuw spel")) screen = SCR_NEW;
-    y += bh + 16;
+    if (button(x, y, bw, bh, "Nieuw spel")) { mpSetup_ = false; screen = SCR_NEW; }
+    y += bh + gap;
+    if (button(x, y, bw, bh, "Multiplayer")) screen = SCR_MP;
+    y += bh + gap;
     if (button(x, y, bw, bh, "Spel laden")) { loadReturn_ = SCR_MENU; loadMessage_.clear(); screen = SCR_LOAD; }
-    y += bh + 16;
+    y += bh + gap;
     if (button(x, y, bw, bh, "Jouw vlag")) screen = SCR_FLAG;
-    y += bh + 16;
+    y += bh + gap;
     if (button(x, y, bw, bh, "Info en besturing")) screen = SCR_INFO;
-    gfx.text(W_ * 0.5f, H_ - 44.0f, "Geen internet nodig  -  alles staat op je iPad", 18, 0x7F8BA0FF, 1);
+    gfx.text(W_ * 0.5f, H_ - 44.0f, "Speelt volledig offline  -  internet is alleen nodig voor multiplayer", 18, 0x7F8BA0FF, 1);
 }
 
 void App::renderNew() {
     Settings& s = newSettings;
     gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
-    gfx.text(W_ * 0.5f, 18, "Nieuw spel", 40, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, 18, mpSetup_ ? "Multiplayer: spel instellen" : "Nieuw spel", 40, C_TEXT, 1);
     float x0 = 40, y = 82;
 
     gfx.text(x0, y, "Kaart", 22, C_ACCENT);
@@ -510,8 +814,14 @@ void App::renderNew() {
         s.troopSpeed = 100;
     }
 
-    if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
-    if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Start", true)) {
+    if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = mpSetup_ ? SCR_MP : SCR_MENU;
+    if (mpSetup_) {
+        if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Open lobby", true)) {
+            saveSettings();
+            std::string err;
+            if (!hostLobby(portNumber(), &err)) showToast(err);
+        }
+    } else if (button(W_ - 340.0f, H_ - 90.0f, 300, 66, "Start", true)) {
         saveSettings();
         startGame(s);
     }
@@ -550,7 +860,7 @@ void App::renderInfo() {
         "Rekruteren: 1000 goud voor 1500 extra troepen.",
         "",
         "Het spel slaat elke minuut automatisch op. Opslaan staat in het menu.",
-        "Dit spel gebruikt geen internet, geen account en geen advertenties.",
+        "Geen account en geen advertenties. Internet is alleen nodig voor multiplayer.",
         "",
         "Kaarten: Natural Earth (publiek domein). Lettertype: Aileron (CC0).",
         "Gebouwd met SDL2 (zlib-licentie) en OpenGL ES 2.0. Muziek: Holding The Ridge.",
@@ -624,7 +934,7 @@ void App::renderFlag() {
     }
 
     float bw = 300, by = py + ph + 30;
-    if (button(W_ * 0.5f - bw - 10, by, bw, 66, "Kies uit Foto's", true)) {
+    if (button(W_ * 0.5f - bw - 10, by, bw, 66, "Kies afbeelding", true)) {
         if (!fc_flag_pick((saveDir_ + "flag.png").c_str()))
             showToast("Fotobibliotheek is hier niet beschikbaar");
     }
@@ -645,7 +955,13 @@ void App::renderFlag() {
 // ------------------------------------------------------------------ game screen
 
 void App::renderGame() {
+    {
+        const Player& me = game.players[game.humanId];
+        if (me.spawned && !wasSpawned_ && me.alive && me.tiles > 0) focusOnHuman(std::max(zoom_, 4.0f));
+        wasSpawned_ = me.spawned;
+    }
     gfx.updateMap(game);
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x121C2BFF);
     float fr[4];
     gfx.drawMap(camX_, camY_, zoom_, flagRect(fr) ? fr : 0);
     renderWorldOverlays();
@@ -752,8 +1068,10 @@ void App::renderHUD() {
     snprintf(buf, sizeof buf, "%.1f%%  #%d/%d", pct, game.rankOf(game.humanId), (int)game.players.size() - 1);
     gfx.text(680, 4, "LAND  /  PLAATS", 13, C_DIM);
     gfx.text(680, 20, buf, 20, C_TEXT);
-    snprintf(buf, sizeof buf, "x%d", speed_);
-    if (button(W_ - 186.0f, 5, 80, 40, buf)) speed_ = speed_ >= 3 ? 1 : speed_ + 1;
+    if (netMode_ == NET_OFF) {
+        snprintf(buf, sizeof buf, "x%d", speed_);
+        if (button(W_ - 186.0f, 5, 80, 40, buf)) speed_ = speed_ >= 3 ? 1 : speed_ + 1;
+    }
     if (button(W_ - 100.0f, 5, 94, 40, "Menu")) overlay = OV_PAUSE;
 
     // ---- leaderboard (right)
@@ -796,6 +1114,7 @@ void App::renderHUD() {
         for (int k = (int)game.events.size() - 1; k >= 0 && shown < 5; --k) {
             const GameEvent& e = game.events[k];
             if (!game.spawnPhase && game.tick - e.tick > 150) break;
+            if (!game.eventVisible(e)) continue;
             float w = gfx.textWidth(e.text, 16) + 16;
             gfx.rect(8, y, w, 24, 0x00000099);
             gfx.text(16, y + 3, e.text, 16, rgbToRgba(e.color));
@@ -807,8 +1126,17 @@ void App::renderHUD() {
     if (game.spawnPhase) {
         float w = 640;
         panel((W_ - w) * 0.5f, H_ - 120.0f, w, 90);
-        gfx.text(W_ * 0.5f, H_ - 110.0f, "Kies je startplek", 28, C_ACCENT, 1);
-        gfx.text(W_ * 0.5f, H_ - 72.0f, "Tik op vrij land. Slepen en knijpen om te zoeken.", 19, C_TEXT, 1);
+        if (me.spawned) {
+            gfx.text(W_ * 0.5f, H_ - 110.0f, "Wachten op de andere spelers...", 28, C_ACCENT, 1);
+            if (netMode_ == NET_HOST) {
+                if (button(W_ * 0.5f - 150, H_ - 74.0f, 300, 40, "Start nu (rest willekeurig)", true)) game.autoSpawnRemaining();
+            } else {
+                gfx.text(W_ * 0.5f, H_ - 72.0f, "Het spel begint als iedereen een startplek heeft.", 19, C_TEXT, 1);
+            }
+        } else {
+            gfx.text(W_ * 0.5f, H_ - 110.0f, "Kies je startplek", 28, C_ACCENT, 1);
+            gfx.text(W_ * 0.5f, H_ - 72.0f, "Tik op vrij land. Slepen en knijpen om te zoeken.", 19, C_TEXT, 1);
+        }
         return;
     }
 
@@ -823,7 +1151,7 @@ void App::renderHUD() {
         }
     gfx.text(326, by + 4, "BOUWEN", 13, C_DIM);
     for (int b = 0; b < B_COUNT; ++b) {
-        Cost c = game.buildCost(b);
+        Cost c = game.buildCost(game.humanId, b);
         if (c.materials > 0) snprintf(buf, sizeof buf, "%s + %s gr", formatNumber(c.gold).c_str(), formatNumber(c.materials).c_str());
         else snprintf(buf, sizeof buf, "%s goud", formatNumber(c.gold).c_str());
         bool afford = me.gold >= c.gold && me.materials >= c.materials;
@@ -834,11 +1162,7 @@ void App::renderHUD() {
                 showToast("Tik op je eigen land om te bouwen");
         }
     }
-    std::string why;
-    if (button(800, by + 22, 112, 52, "Rekruteer", false, me.alive && me.gold >= 1000, "1000 goud")) {
-        if (game.recruit(game.humanId, &why)) showToast("+1500 troepen");
-        else showToast(why);
-    }
+    if (button(800, by + 22, 112, 52, "Rekruteer", false, me.alive && me.gold >= 1000, "1000 goud")) actRecruit();
     if (button(920, by + 22, 96, 52, "Mijn land", false, me.alive)) focusOnHuman(std::max(zoom_, 3.0f));
 
     renderBuildingPanel();
@@ -870,8 +1194,7 @@ void App::renderBuildingPanel() {
         snprintf(buf, sizeof buf, "%s goud + %s grondstoffen", formatNumber(c.gold).c_str(), formatNumber(c.materials).c_str());
         const Player& me = game.players[game.humanId];
         if (button(x + 14, y + 74, w - 28, 56, "Verbeteren", false, me.gold >= c.gold && me.materials >= c.materials, buf)) {
-            std::string why;
-            if (!game.upgrade(game.humanId, bi, &why)) showToast(why);
+            actUpgrade(bi);
         }
     } else {
         gfx.text(x + 14, y + 90, "Hoogste niveau bereikt", 18, C_DIM);
@@ -884,13 +1207,7 @@ void App::handleMapTap(float x, float y) {
     std::string why;
     const int me = game.humanId;
     if (game.spawnPhase) {
-        if (game.spawnHuman(t)) {
-            gfx.updateMap(game);
-            focusOnHuman(std::max(zoom_, 4.0f));
-            autosave();
-        } else {
-            showToast("Kies vrij land (geen water of bezet gebied)");
-        }
+        actSpawn(t);
         return;
     }
     if (!game.players[me].alive || game.over) {
@@ -898,8 +1215,7 @@ void App::handleMapTap(float x, float y) {
         return;
     }
     if (buildMode_ >= 0) {
-        if (game.build(me, buildMode_, t, &why)) buildMode_ = -1;
-        else showToast(why);
+        actBuild(buildMode_, t);
         return;
     }
     if (game.owner[t] == me) {
@@ -918,16 +1234,16 @@ void App::handleMapTap(float x, float y) {
         return;
     }
     selBuildingTile_ = -1;
-    double troops = game.players[me].troops * kAttackPct[attackIdx_];
-    if (!game.orderAttack(me, t, troops, &why)) showToast(why);
+    actAttack(t);
 }
 
 void App::renderPause() {
     gfx.rect(0, 0, (float)W_, (float)H_, 0x000000A0);
     block(0, 0, (float)W_, (float)H_);
-    float w = 460, h = 636, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
+    const bool mp = netMode_ != NET_OFF;
+    float w = 460, h = mp ? 340.0f : 636.0f, x = (W_ - w) * 0.5f, y = (H_ - h) * 0.5f;
     panel(x, y, w, h);
-    gfx.text(W_ * 0.5f, y + 18, "Gepauzeerd", 32, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, y + 18, mp ? "Menu (spel loopt door)" : "Gepauzeerd", 32, C_TEXT, 1);
     float bx = x + 40, bw = w - 80, cy = y + 76;
     if (button(bx, cy, bw, 60, "Verder spelen", true)) overlay = OV_NONE;
     cy += 76;
@@ -936,6 +1252,14 @@ void App::renderPause() {
         saveSettings();
     }
     cy += 76;
+    if (mp) {
+        if (button(bx, cy, bw, 60, netMode_ == NET_HOST ? "Spel stoppen (voor iedereen)" : "Spel verlaten")) {
+            leaveMultiplayer();
+            screen = SCR_MENU;
+            overlay = OV_NONE;
+        }
+        return;
+    }
     gfx.text(bx, cy, "Opslaan in:", 18, C_DIM);
     cy += 26;
     for (int k = 1; k < 4; ++k) {
@@ -952,6 +1276,7 @@ void App::renderPause() {
     cy += 76;
     if (button(bx, cy, bw, 60, "Nieuw spel")) {
         autosave();
+        mpSetup_ = false;
         screen = SCR_NEW;
         overlay = OV_NONE;
     }
@@ -982,8 +1307,8 @@ void App::renderGameOver() {
     }
     gfx.text(W_ * 0.5f, y + 90, line, 22, C_TEXT, 1);
     if (button(x + 30, y + 150, w - 60, 56, "Verder kijken")) overlay = OV_NONE;
-    if (button(x + 30, y + 220, (w - 70) / 2, 56, "Nieuw spel", true)) { screen = SCR_NEW; overlay = OV_NONE; }
-    if (button(x + 40 + (w - 70) / 2, y + 220, (w - 70) / 2, 56, "Hoofdmenu")) { screen = SCR_MENU; overlay = OV_NONE; }
+    if (button(x + 30, y + 220, (w - 70) / 2, 56, "Nieuw spel", true)) { leaveMultiplayer(); mpSetup_ = false; screen = SCR_NEW; overlay = OV_NONE; }
+    if (button(x + 40 + (w - 70) / 2, y + 220, (w - 70) / 2, 56, "Hoofdmenu")) { leaveMultiplayer(); screen = SCR_MENU; overlay = OV_NONE; }
 }
 
 }  // namespace fc

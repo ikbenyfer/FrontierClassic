@@ -4,8 +4,10 @@ An offline territory conquest game for the **iPad 2** (A1395, iOS 9.3.5, armv7, 
 It plays like OpenFront and territorial games: grow your land, send troops, beat the AI.
 Everything is written from scratch: own code, own look, own maps.
 
-**100% offline.** No server, account, login, multiplayer, ads, analytics or network code.
-The CI build checks that the binary contains no network frameworks or network functions.
+**Single player is 100% offline.** No server, account, login, ads or analytics.
+The only network code is the optional multiplayer (plain TCP sockets, `src/net`); the CI build checks that the iPad binary contains no web/HTTP frameworks.
+
+There is also a **Windows version** (64-bit, one `.exe`), built from the same source.
 
 ## What's in it
 
@@ -20,6 +22,15 @@ The CI build checks that the binary contains no network frameworks or network fu
 | Controls | Drag = move, pinch = zoom, tap = attack / build / select. Big buttons, landscape only. |
 | Saving | Autosave every minute and when the app goes to the background, plus 3 slots. Plain JSON files in the app's `Documents` folder (also visible through iTunes file sharing). Your new-game settings are remembered. |
 
+## Multiplayer
+
+Up to 8 people, iPad and Windows mixed. No central server: one player hosts.
+
+- **Host:** Multiplayer → Spel hosten → choose settings → Open lobby → Start spel. Forward the TCP port (default 47800) in your router to the hosting device and give your public IP address + port to the others.
+- **Join:** Multiplayer → Meedoen → enter the host's IP address and port.
+- The host runs the simulation and sends the state (changed tiles, player numbers, buildings, ships) about 7 times per second; the others only send their orders. Empty seats and players who leave are played by the AI.
+- Multiplayer games are not saved.
+
 ## Technology
 
 - C++11, own engine: `src/core` (simulation, AI, JSON, save/load; no SDL) and `src/app` (SDL2 + OpenGL ES 2.0).
@@ -31,9 +42,11 @@ The CI build checks that the binary contains no network frameworks or network fu
 
 Every push builds in GitHub Actions (`.github/workflows/build.yml`):
 
+0. **Multiplayer test**: a host and two clients over localhost; every client must end with exactly the host's map.
 1. **Simulation tests** (gcc + clang, `-Werror`, plus AddressSanitizer/UBSan): all 6 maps × 5 modes with 50 AI, consistency checks, save→load→compare.
 2. **Screenshots**: the desktop version plays automatically under Linux (Mesa, OpenGL ES 2.0) and takes pictures (artifact `screenshots`).
 3. **iPad app**: Theos + iOS SDK 14.5, `armv7`, minimum iOS 9.3, fake-signed with `ldid`. Checks: armv7 only, iOS 9.3, no network frameworks or functions, Info.plist landscape, all files in the app. Produces `FrontierClassic.ipa` (+ `.deb`) as an artifact and under Releases.
+4. **Windows**: cross-compiled with MinGW, SDL2 linked statically, desktop OpenGL 2.1. Produces `FrontierClassic-Windows-x.y.z.zip`.
 
 Regenerating the assets yourself (only needed if you change them):
 ```

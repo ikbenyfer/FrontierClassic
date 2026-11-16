@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include "App.h"
@@ -75,7 +76,19 @@ static void frame(App& app, SDL_Window* win) {
     int w, h, dw, dh;
     SDL_GetWindowSize(win, &w, &h);
     SDL_GL_GetDrawableSize(win, &dw, &dh);
+#if defined(__IPHONEOS__)
     app.render(w, h, dw, dh);
+#else
+    // Desktop: the game always thinks in 1024x768 (like the iPad) and is scaled
+    // to the window, with black bars when the shape differs.
+    if (w < 1 || h < 1 || dw < 1 || dh < 1) return;
+    float s = std::min(dw / 1024.0f, dh / 768.0f);
+    int vw = (int)(1024 * s), vh = (int)(768 * s);
+    int vx = (dw - vw) / 2, vy = (dh - vh) / 2;
+    float px = dw / (float)w;  // drawable pixels per window point
+    app.setPointerTransform(px / s, vx / px, vy / px);
+    app.render(1024, 768, vw, vh, vx, vy);
+#endif
 }
 
 static void shot(App& app, SDL_Window* win, const std::string& path) {
@@ -118,8 +131,7 @@ static void runTicks(App& app, int n) {
     }
 }
 
-static int spawnNear(App& app, const char* nation) {
-    Game& g = app.game;
+static int spawnNear(Game& g, const char* nation) {
     for (size_t k = 0; k < g.map.nations.size(); ++k)
         if (g.map.nations[k].name == nation) {
             int x = g.map.nations[k].x, y = g.map.nations[k].y;
@@ -135,6 +147,83 @@ static int spawnNear(App& app, const char* nation) {
     for (int t = (int)g.owner.size() / 2; t < (int)g.owner.size(); ++t)
         if (g.canSpawnAt(t)) return t;
     return -1;
+}
+
+static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& dir) {
+    const int port = 47955;
+    app.screen = SCR_MP;
+    shot(app, win, dir + "/15_multiplayer.bmp");
+    app.screen = SCR_JOIN;
+    shot(app, win, dir + "/16_join.bmp");
+
+    app.newSettings = Settings();
+    app.newSettings.mapId = "europe";
+    app.newSettings.numAI = 25;
+    std::string err;
+    if (!app.hostLobby(port, &err)) {
+        printf("MP: host failed: %s\n", err.c_str());
+        return;
+    }
+    ClientSession cl;
+    Game cg;
+    std::string mapsDir = resourceDir() + "maps";
+    if (!cl.connect("127.0.0.1", port, &err)) {
+        printf("MP: connect failed: %s\n", err.c_str());
+        return;
+    }
+    for (int k = 0; k < 400 && !(cl.state() == ClientSession::LOBBY && cl.lobbyCount() == 2); ++k) {
+        app.update(0);
+        cl.pump(cg, mapsDir);
+        SDL_Delay(5);
+    }
+    printf("MP: lobby players=%d client slot=%d/%d\n", 1 + app.hostSession().clientCount(), cl.lobbySlot(), cl.lobbyCount());
+    shot(app, win, dir + "/17_lobby_host.bmp");
+    if (!app.hostStart()) return;
+    bool started = false;
+    for (int k = 0; k < 400 && !started; ++k) {
+        app.update(0);
+        started = cl.pump(cg, mapsDir);
+        SDL_Delay(5);
+    }
+    printf("MP: client started=%d as player %d\n", (int)started, cg.humanId);
+    if (!started) return;
+    app.game.spawnHuman(spawnNear(app.game, "France"));
+    cl.sendOrder(ORD_SPAWN, spawnNear(cg, "Poland"), 0, 0);
+    for (int k = 0; k < 900; ++k) {
+        app.hostSession().pumpGame(app.game);
+        runTicks(app, 1);
+        if (k % 30 == 10 && cg.players[cg.humanId].alive) {
+            // the remote player expands too: free land near its own territory
+            const Player& me = cg.players[cg.humanId];
+            for (int tries = 0; tries < 300; ++tries) {
+                int x = (int)me.cx + rand() % 61 - 30, y = (int)me.cy + rand() % 61 - 30;
+                if (x < 0 || y < 0 || x >= cg.map.w || y >= cg.map.h) continue;
+                int t = y * cg.map.w + x;
+                if (cg.map.isLand(t) && cg.owner[t] != cg.humanId) {
+                    cl.sendOrder(ORD_ATTACK, t, 0, 0.5f);
+                    break;
+                }
+            }
+        }
+        if (k % 3 == 0) app.hostSession().broadcast(app.game, true);
+        cl.pump(cg, mapsDir);
+    }
+    for (int k = 0; k < 50; ++k) {
+        app.hostSession().pumpGame(app.game);
+        app.hostSession().broadcast(app.game, true);
+        SDL_Delay(4);
+        cl.pump(cg, mapsDir);
+    }
+    size_t diff = 0;
+    for (size_t t = 0; t < cg.owner.size() && t < app.game.owner.size(); ++t)
+        if (cg.owner[t] != app.game.owner[t]) ++diff;
+    printf("MP: after 900 ticks: tiles different between host and client: %d, client land %d, host land %d\n", (int)diff,
+           cg.players[cg.humanId].tiles, app.game.players[1].tiles);
+    app.fitMap();
+    shot(app, win, dir + "/18_multiplayer_game.bmp");
+    cl.close();
+    app.leaveMultiplayer();
+    app.screen = SCR_MENU;
 }
 
 static void runShots(App& app, SDL_Window* win, const std::string& dir) {
@@ -172,7 +261,7 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     s.numAI = 40;
     app.startGame(s);
     shot(app, win, dir + "/04_spawn_phase.bmp");
-    app.game.spawnHuman(spawnNear(app, "Germany"));
+    app.game.spawnHuman(spawnNear(app.game, "Germany"));
     runTicks(app, 1800);
     app.fitMap();
     shot(app, win, dir + "/05_world_3min.bmp");
@@ -186,6 +275,8 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     shot(app, win, dir + "/08_load.bmp");
     if (app.loadSlot("slot1")) shot(app, win, dir + "/09_loaded.bmp");
 
+    runMultiplayerShots(app, win, dir);
+
     const char* maps[5] = {"europe", "asia", "northamerica", "southamerica", "africa"};
     const char* home[5] = {"France", "India", "Mexico", "Brazil", "Nigeria"};
     int modes[5] = {MODE_TEAMS, MODE_CONQUEST, MODE_SANDBOX, MODE_CUSTOM, MODE_FFA};
@@ -198,7 +289,7 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
         t.customTeams = modes[m] == MODE_CUSTOM;
         t.difficulty = DIFF_HARD;
         if (!app.startGame(t)) continue;
-        app.game.spawnHuman(spawnNear(app, home[m]));
+        app.game.spawnHuman(spawnNear(app.game, home[m]));
         runTicks(app, 1200);
         app.fitMap();
         char buf[256];
@@ -221,9 +312,15 @@ int main(int argc, char* argv[]) {
         printf("SDL_Init: %s\n", SDL_GetError());
         return 1;
     }
+#if defined(_WIN32)
+    // Windows has no OpenGL ES: desktop OpenGL 2.1 runs the same shader
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
@@ -275,6 +372,12 @@ int main(int argc, char* argv[]) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) running = false;
+#if !defined(__IPHONEOS__)
+            if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F11) {
+                bool fs = (SDL_GetWindowFlags(win) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
+                SDL_SetWindowFullscreen(win, fs ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
+            }
+#endif
             app->handleEvent(e);
         }
         if (g_background) {  // iOS forbids GL drawing in the background

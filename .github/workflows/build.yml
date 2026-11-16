@@ -7,6 +7,8 @@ on:
 env:
   SDL_VERSION: 2.0.22
   SDL_SHA256: fe7cbf3127882e3fc7259a75a0cb585620272c51745d3852ab9dd87960697f2e
+  SDL_WIN_VERSION: 2.30.9
+  SDL_WIN_SHA256: b188d165dc4a0372042bff3d0c18e9bb90772581e92a7b8b47b521b47714f75c
 
 jobs:
   tests:
@@ -28,6 +30,16 @@ jobs:
           g++ -std=c++11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all src/core/*.cpp tests/sim_test.cpp -o sim_test_asan
           ./sim_test_asan Resources/maps 600
 
+      - name: Multiplayer-test (host + 2 spelers via localhost)
+        run: |
+          g++ -std=c++11 -O2 -Wall -Wextra -Werror src/core/*.cpp src/net/*.cpp tests/net_test.cpp -pthread -o net_test
+          ./net_test Resources/maps
+
+      - name: Multiplayer-test met geheugencontrole
+        run: |
+          g++ -std=c++11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all src/core/*.cpp src/net/*.cpp tests/net_test.cpp -pthread -o net_test_asan
+          ./net_test_asan Resources/maps
+
   screenshots:
     name: Schermafbeeldingen (Linux, OpenGL ES 2.0 via Mesa)
     runs-on: ubuntu-latest
@@ -41,7 +53,7 @@ jobs:
 
       - name: Desktopversie bouwen
         run: |
-          g++ -std=c++11 -O2 -Wall -Wextra src/core/*.cpp src/app/*.cpp $(sdl2-config --cflags) \
+          g++ -std=c++11 -O2 -Wall -Wextra src/core/*.cpp src/net/*.cpp src/app/*.cpp $(sdl2-config --cflags) \
             $(sdl2-config --libs) -lGLESv2 -o frontier_desktop
 
       - name: Spel automatisch spelen en fotograferen
@@ -50,15 +62,68 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
           mkdir -p shots
-          xvfb-run -a -s "-screen 0 1024x768x24" ./frontier_desktop --shots shots
+          xvfb-run -a -s "-screen 0 1024x768x24" ./frontier_desktop --shots shots | tee shots.log
+          grep "MP:" shots.log
+          grep -q "tiles different between host and client: 0," shots.log
           for f in shots/*.bmp; do convert "$f" "${f%.bmp}.png" && rm "$f"; done
           ls -l shots
-          test "$(ls shots/*.png | wc -l)" -ge 9
+          test "$(ls shots/*.png | wc -l)" -ge 18
 
       - uses: actions/upload-artifact@v4
         with:
           name: screenshots
           path: shots/*.png
+
+  windows:
+    name: Windows-versie bouwen (64-bit)
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: MinGW-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 zip
+
+      - name: SDL ${{ env.SDL_WIN_VERSION }} voor Windows (gecontroleerd met SHA-256)
+        run: |
+          curl -fsSL -o sdl-mingw.tar.gz "https://github.com/libsdl-org/SDL/releases/download/release-$SDL_WIN_VERSION/SDL2-devel-$SDL_WIN_VERSION-mingw.tar.gz"
+          echo "$SDL_WIN_SHA256  sdl-mingw.tar.gz" | sha256sum -c -
+          tar xzf sdl-mingw.tar.gz
+
+      - name: Bouwen (alles in een .exe, geen losse DLL's)
+        run: |
+          SDL="SDL2-$SDL_WIN_VERSION/x86_64-w64-mingw32"
+          x86_64-w64-mingw32-windres windows/app.rc -O coff -o app_res.o
+          x86_64-w64-mingw32-g++ -std=c++11 -O2 -Wall -Wextra -DUNICODE -D_UNICODE \
+            src/core/*.cpp src/net/*.cpp src/app/*.cpp app_res.o \
+            -I"$SDL/include/SDL2" -L"$SDL/lib" \
+            -static -lmingw32 -mwindows -lSDL2main -lSDL2 \
+            -lopengl32 -lgdiplus -lcomdlg32 -lws2_32 -liphlpapi \
+            -lm -lkernel32 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lversion -luuid -ladvapi32 -lsetupapi -lshell32 -ldinput8 \
+            -o FrontierClassic.exe
+          file FrontierClassic.exe
+          x86_64-w64-mingw32-objdump -p FrontierClassic.exe | grep "DLL Name" | sort
+
+      - name: Zip maken
+        run: |
+          VERSION=$(grep '^Version:' control | awk '{print $2}')
+          D="FrontierClassic-Windows"
+          mkdir -p "$D/Resources"
+          cp FrontierClassic.exe "$D/"
+          cp -R Resources/maps Resources/font Resources/music "$D/Resources/"
+          cp windows/LEESMIJ.txt "$D/"
+          zip -qr "FrontierClassic-Windows-$VERSION.zip" "$D"
+          ls -l *.zip
+          unzip -l "FrontierClassic-Windows-$VERSION.zip" | tail -3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FrontierClassic-Windows
+          path: FrontierClassic-Windows-*.zip
 
   ios:
     name: iPad-app bouwen (iOS 9.3, armv7)
@@ -145,12 +210,15 @@ jobs:
           if grep -qiE "CFNetwork|Network.framework|WebKit|SystemConfiguration|libnetwork|Security.framework" libs.txt; then
             echo "::error::netwerk- of webframework gevonden"; exit 1
           fi
-          echo "== netwerkfuncties in de binary"
+          echo "== netwerk: alleen kale sockets voor multiplayer, geen web/HTTP/tracking"
           "$TC/nm" -u "$BIN" > undef.txt || true
-          if grep -E "^ *_(socket|connect|getaddrinfo|gethostbyname|send|recv|sendto|recvfrom)$|NSURLSession|NSURLConnection|CFStream|CFSocket" undef.txt; then
-            echo "::error::netwerkfuncties gevonden"; exit 1
+          if grep -E "NSURLSession|NSURLConnection|CFStream|CFSocket|CFHTTP|WKWebView|UIWebView|SCNetworkReachability" undef.txt; then
+            echo "::error::web- of HTTP-functies gevonden"; exit 1
           fi
-          echo "geen netwerkfuncties"
+          grep -E "^ *_(socket|connect|bind|listen|accept|getaddrinfo)$" undef.txt | sort | tr '\n' ' '
+          grep -qE "^ *_socket$" undef.txt || { echo "::error::multiplayer-sockets ontbreken"; exit 1; }
+          echo
+          echo "ok: alleen sockets (multiplayer)"
           echo "== Info.plist"
           grep -A1 -E "MinimumOSVersion|CFBundleIdentifier" "$APP/Info.plist"
           grep -q "UIInterfaceOrientationPortrait" "$APP/Info.plist" && { echo "::error::portrait staat aan"; exit 1; } || true
@@ -178,7 +246,7 @@ jobs:
             project/packages/*.ipa
             project/packages/*.deb
 
-      - name: Release op GitHub
+      - name: Release op GitHub (iPad-bestanden)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         working-directory: project
         env:
@@ -189,9 +257,26 @@ jobs:
           TAG="v$VERSION"
           cp packages/FrontierClassic.ipa "packages/FrontierClassic-$VERSION.ipa"
           DEB=$(ls packages/*.deb | head -1)
-          printf 'Frontier Classic %s voor iPad 2 (iOS 9.3.5, armv7). Volledig offline.\n\nInstalleren: iPad IPA Installer (USB) of Filza, met AppSync Unified.\n' "$VERSION" > notes.md
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "packages/FrontierClassic-$VERSION.ipa" "$DEB" --clobber
-          else
-            gh release create "$TAG" "packages/FrontierClassic-$VERSION.ipa" "$DEB" --title "Frontier Classic $VERSION" --notes-file notes.md --target "$GITHUB_SHA" --latest
-          fi
+          printf 'Frontier Classic %s. iPad 2 (iOS 9.3.5, armv7) en Windows (64-bit). Singleplayer is volledig offline; internet is alleen nodig voor multiplayer.\n\niPad: installeer de .ipa met iPad IPA Installer (USB) of Filza, met AppSync Unified.\nWindows: pak de zip uit en start FrontierClassic.exe.\n' "$VERSION" > notes.md
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Frontier Classic $VERSION" --notes-file notes.md --target "$GITHUB_SHA" --latest || true
+          gh release upload "$TAG" "packages/FrontierClassic-$VERSION.ipa" "$DEB" --clobber
+
+  release-windows:
+    name: Windows-zip bij de release zetten
+    needs: [windows, ios]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: FrontierClassic-Windows
+      - name: Uploaden
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION=$(grep '^Version:' control | awk '{print $2}')
+          gh release upload "v$VERSION" FrontierClassic-Windows-*.zip --clobber

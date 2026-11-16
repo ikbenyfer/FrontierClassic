@@ -28,7 +28,9 @@ static const char* kVS =
     "}\n";
 
 static const char* kFS =
+    "#ifdef GL_ES\n"
     "precision mediump float;\n"
+    "#endif\n"
     "uniform sampler2D uTex;\n"
     "uniform sampler2D uFlag;\n"
     "uniform float uMode;\n"
@@ -62,6 +64,10 @@ static GLuint compile(GLenum type, const char* src, std::string* err) {
 }
 
 bool Gfx::init(const std::string& resDir, std::string* err) {
+    if (!fcgl::load()) {
+        if (err) *err = "Deze videokaart ondersteunt geen OpenGL 2.0";
+        return false;
+    }
     GLuint vs = compile(GL_VERTEX_SHADER, kVS, err), fs = compile(GL_FRAGMENT_SHADER, kFS, err);
     if (!vs || !fs) return false;
     prog_ = glCreateProgram();
@@ -136,14 +142,16 @@ void Gfx::shutdown() {
     mapTex_ = fontTex_ = prog_ = 0;
 }
 
-void Gfx::beginFrame(int winW, int winH, int drawW, int drawH) {
+void Gfx::beginFrame(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
+    vpX_ = vpX;
+    vpY_ = vpY;
     winW_ = winW;
     winH_ = winH;
     drawW_ = drawW;
     drawH_ = drawH;
-    glViewport(0, 0, drawW, drawH);
-    glClearColor(0.07f, 0.11f, 0.17f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);  // also the letterbox bars
+    glViewport(vpX, vpY, drawW, drawH);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -458,7 +466,7 @@ void Gfx::image(float x, float y, float w, float h) {
 bool Gfx::screenshotBMP(const std::string& path) {
     flush();
     std::vector<uint8_t> px((size_t)drawW_ * drawH_ * 4);
-    glReadPixels(0, 0, drawW_, drawH_, GL_RGBA, GL_UNSIGNED_BYTE, &px[0]);
+    glReadPixels(vpX_, vpY_, drawW_, drawH_, GL_RGBA, GL_UNSIGNED_BYTE, &px[0]);
     SDL_Surface* s = SDL_CreateRGBSurfaceWithFormat(0, drawW_, drawH_, 32, SDL_PIXELFORMAT_ABGR8888);
     if (!s) return false;
     for (int y = 0; y < drawH_; ++y)

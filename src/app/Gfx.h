@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "SDL_opengles2.h"
+#include "GL.h"
 
 namespace fc {
 
@@ -21,7 +21,7 @@ public:
     void shutdown();
 
     // logical size (points) and drawable size (pixels)
-    void beginFrame(int winW, int winH, int drawW, int drawH);
+    void beginFrame(int winW, int winH, int drawW, int drawH, int vpX = 0, int vpY = 0);
     void endFrame() { flush(); }
 
     // ---- map ----
@@ -70,7 +70,7 @@ private:
     std::vector<Vtx> verts_;
     Glyph glyphs_[96];
     float fontSize_ = 30, fontAscent_ = 24;
-    int winW_ = 1024, winH_ = 768, drawW_ = 1024, drawH_ = 768;
+    int winW_ = 1024, winH_ = 768, drawW_ = 1024, drawH_ = 768, vpX_ = 0, vpY_ = 0;
 
     // map state
     int mapW_ = 0, mapH_ = 0;
