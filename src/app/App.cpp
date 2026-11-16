@@ -1,5 +1,6 @@
 #include "App.h"
 #include "Music.h"
+#include "Flag.h"
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
@@ -39,6 +40,7 @@ bool App::init(const std::string& resDir, const std::string& saveDir, std::strin
     }
     loadSettings();
     fc_music_load((resDir + "music/holding_the_ridge.mp3").c_str());
+    loadFlag();
     // write test: can we save in the save folder?
     std::string probe = saveDir_ + "write_test.tmp";
     saveOk_ = writeFileAtomic(probe, "ok");
@@ -81,6 +83,7 @@ bool App::startGame(const Settings& s) {
         showToast(err);
         return false;
     }
+    gfx.setFlagOwner(game.humanId);
     gfx.setMap(game);
     game.changed.clear();
     screen = SCR_GAME;
@@ -103,6 +106,7 @@ bool App::loadSlot(const std::string& slot) {
         return false;
     }
     game = g;
+    gfx.setFlagOwner(game.humanId);
     gfx.setMap(game);
     game.changed.clear();
     screen = SCR_GAME;
@@ -363,6 +367,7 @@ void App::render(int winW, int winH, int drawW, int drawH) {
     W_ = winW;
     H_ = winH;
     blocks_.clear();
+    if (fc_flag_picked() && loadFlag()) showToast("Je vlag is ingesteld");
     gfx.beginFrame(winW, winH, drawW, drawH);
     switch (screen) {
         case SCR_MENU: renderMenu(); break;
@@ -370,6 +375,7 @@ void App::render(int winW, int winH, int drawW, int drawH) {
         case SCR_LOAD: renderLoad(); break;
         case SCR_INFO: renderInfo(); break;
         case SCR_GAME: renderGame(); break;
+        case SCR_FLAG: renderFlag(); break;
     }
     if (!toast_.empty() && SDL_GetTicks() < toastUntil_) {
         float w = gfx.textWidth(toast_, 20) + 40;
@@ -413,6 +419,8 @@ void App::renderMenu() {
     if (button(x, y, bw, bh, "Nieuw spel")) screen = SCR_NEW;
     y += bh + 16;
     if (button(x, y, bw, bh, "Spel laden")) { loadReturn_ = SCR_MENU; loadMessage_.clear(); screen = SCR_LOAD; }
+    y += bh + 16;
+    if (button(x, y, bw, bh, "Jouw vlag")) screen = SCR_FLAG;
     y += bh + 16;
     if (button(x, y, bw, bh, "Info en besturing")) screen = SCR_INFO;
     gfx.text(W_ * 0.5f, H_ - 44.0f, "Geen internet nodig  -  alles staat op je iPad", 18, 0x7F8BA0FF, 1);
@@ -557,11 +565,89 @@ void App::renderInfo() {
     if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
 }
 
+// ------------------------------------------------------------------ flag
+
+bool App::loadFlag() {
+    int w = 0, h = 0;
+    unsigned char* px = fc_flag_decode((saveDir_ + "flag.png").c_str(), 256, &w, &h);
+    if (!px) return false;
+    setFlagPixels(px, w, h);
+    free(px);
+    return true;
+}
+
+void App::setFlagPixels(const uint8_t* rgba, int w, int h) {
+    gfx.setFlag(rgba, w, h);
+    if (game.map.w) gfx.refreshMap(game);
+}
+
+void App::removeFlag() {
+    remove((saveDir_ + "flag.png").c_str());
+    gfx.setFlag(0, 0, 0);
+    if (game.map.w) gfx.refreshMap(game);
+}
+
+// Where the flag is drawn: your territory's bounding box, filled without
+// stretching the flag out of shape (the edges may be cut off).
+bool App::flagRect(float out[4]) const {
+    if (!gfx.hasFlag() || !game.map.w) return false;
+    const Player& me = game.players[game.humanId];
+    if (!me.alive || me.bx1 < me.bx0) return false;
+    float bw = (float)(me.bx1 - me.bx0 + 1), bh = (float)(me.by1 - me.by0 + 1);
+    float aspect = (float)gfx.flagW() / std::max(1, gfx.flagH());
+    float w = bw, h = bh;
+    if (bw / bh > aspect) h = bw / aspect;
+    else w = bh * aspect;
+    out[0] = me.bx0 + bw * 0.5f - w * 0.5f;
+    out[1] = me.by0 + bh * 0.5f - h * 0.5f;
+    out[2] = w;
+    out[3] = h;
+    return true;
+}
+
+void App::renderFlag() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 24, "Jouw vlag", 40, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, 84, "Je eigen land wordt in het spel met deze vlag gevuld.", 20, C_DIM, 1);
+
+    // preview
+    float pw = 420, ph = 280, px = (W_ - pw) * 0.5f, py = 130;
+    gfx.rect(px - 4, py - 4, pw + 8, ph + 8, 0x3A4A66FF);
+    gfx.rect(px, py, pw, ph, 0x1B2638FF);
+    if (gfx.hasFlag()) {
+        float a = (float)gfx.flagW() / std::max(1, gfx.flagH());
+        float w = pw, h = pw / a;
+        if (h > ph) { h = ph; w = ph * a; }
+        gfx.image(px + (pw - w) * 0.5f, py + (ph - h) * 0.5f, w, h);
+    } else {
+        gfx.text(W_ * 0.5f, py + ph * 0.5f - 14, "Nog geen vlag gekozen", 24, C_DIM, 1);
+    }
+
+    float bw = 300, by = py + ph + 30;
+    if (button(W_ * 0.5f - bw - 10, by, bw, 66, "Kies uit Foto's", true)) {
+        if (!fc_flag_pick((saveDir_ + "flag.png").c_str()))
+            showToast("Fotobibliotheek is hier niet beschikbaar");
+    }
+    if (button(W_ * 0.5f + 10, by, bw, 66, "Vlag verwijderen", false, gfx.hasFlag())) {
+        removeFlag();
+        showToast("Vlag verwijderd");
+    }
+    by += 90;
+    gfx.text(W_ * 0.5f, by, "Of zet zelf een bestand flag.png in de map Documents van de app", 18, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, by + 26, "(iTunes > Bestandsdeling, of Filza) en tik op Opnieuw laden.", 18, C_TEXT, 1);
+    gfx.text(W_ * 0.5f, by + 54, saveDir_ + "flag.png", 14, C_DIM, 1);
+    if (button(W_ * 0.5f - 150, by + 82, 300, 56, "Opnieuw laden")) {
+        showToast(loadFlag() ? "Vlag geladen" : "Geen flag.png gevonden");
+    }
+    if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
+}
+
 // ------------------------------------------------------------------ game screen
 
 void App::renderGame() {
     gfx.updateMap(game);
-    gfx.drawMap(camX_, camY_, zoom_);
+    float fr[4];
+    gfx.drawMap(camX_, camY_, zoom_, flagRect(fr) ? fr : 0);
     renderWorldOverlays();
     uiLocked_ = overlay != OV_NONE;  // HUD buttons below an overlay must not react
     renderHUD();
@@ -688,7 +774,8 @@ void App::renderHUD() {
         for (int r = 0; r < rows; ++r) {
             const Player& pl = game.players[order[r]];
             float ry = y + 28 + r * 24;
-            gfx.rect(x + 10, ry + 4, 12, 12, rgbToRgba(pl.color));
+            if (order[r] == game.humanId && gfx.hasFlag()) gfx.image(x + 8, ry + 4, 18, 12);
+            else gfx.rect(x + 10, ry + 4, 12, 12, rgbToRgba(pl.color));
             std::string name = pl.name.size() > 16 ? pl.name.substr(0, 15) + "." : pl.name;
             gfx.text(x + 28, ry, name, 16, order[r] == game.humanId ? C_ACCENT : C_TEXT);
             snprintf(buf, sizeof buf, "%.1f%%", 100.0 * pl.tiles / std::max(1, game.map.landTiles));

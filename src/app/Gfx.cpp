@@ -15,23 +15,33 @@ static const char* kVS =
     "attribute vec2 aUV;\n"
     "attribute vec4 aCol;\n"
     "uniform vec4 uProj;\n"
+    "uniform vec2 uMapSize;\n"
+    "uniform vec4 uFlagRect;\n"
     "varying vec2 vUV;\n"
+    "varying vec2 vFlagUV;\n"
     "varying vec4 vCol;\n"
     "void main() {\n"
     "  gl_Position = vec4(aPos.x * uProj.x + uProj.z, aPos.y * uProj.y + uProj.w, 0.0, 1.0);\n"
     "  vUV = aUV;\n"
+    "  vFlagUV = (aUV * uMapSize - uFlagRect.xy) / uFlagRect.zw;\n"
     "  vCol = aCol;\n"
     "}\n";
 
 static const char* kFS =
     "precision mediump float;\n"
     "uniform sampler2D uTex;\n"
-    "uniform float uAlpha;\n"
+    "uniform sampler2D uFlag;\n"
+    "uniform float uMode;\n"
     "varying vec2 vUV;\n"
+    "varying vec2 vFlagUV;\n"
     "varying vec4 vCol;\n"
     "void main() {\n"
     "  vec4 t = texture2D(uTex, vUV);\n"
-    "  if (uAlpha > 0.5) gl_FragColor = vec4(vCol.rgb, vCol.a * t.a);\n"
+    "  if (uMode > 1.5) {\n"
+    "    vec3 d = abs(t.rgb - vec3(1.0, 0.0, 1.0));\n"
+    "    if (max(d.r, max(d.g, d.b)) < 0.06) gl_FragColor = vec4(texture2D(uFlag, clamp(vFlagUV, 0.0, 1.0)).rgb, 1.0);\n"
+    "    else gl_FragColor = t;\n"
+    "  } else if (uMode > 0.5) gl_FragColor = vec4(vCol.rgb, vCol.a * t.a);\n"
     "  else gl_FragColor = vCol * t;\n"
     "}\n";
 
@@ -71,7 +81,10 @@ bool Gfx::init(const std::string& resDir, std::string* err) {
     }
     locProj_ = glGetUniformLocation(prog_, "uProj");
     locTex_ = glGetUniformLocation(prog_, "uTex");
-    locAlpha_ = glGetUniformLocation(prog_, "uAlpha");
+    locMode_ = glGetUniformLocation(prog_, "uMode");
+    locFlag_ = glGetUniformLocation(prog_, "uFlag");
+    locMapSize_ = glGetUniformLocation(prog_, "uMapSize");
+    locFlagRect_ = glGetUniformLocation(prog_, "uFlagRect");
 
     // font
     std::string meta, bin;
@@ -116,6 +129,8 @@ bool Gfx::init(const std::string& resDir, std::string* err) {
 
 void Gfx::shutdown() {
     if (mapTex_) glDeleteTextures(1, &mapTex_);
+    if (flagTex_) glDeleteTextures(1, &flagTex_);
+    flagTex_ = 0;
     if (fontTex_) glDeleteTextures(1, &fontTex_);
     if (prog_) glDeleteProgram(prog_);
     mapTex_ = fontTex_ = prog_ = 0;
@@ -137,18 +152,22 @@ void Gfx::beginFrame(int winW, int winH, int drawW, int drawH) {
     // logical pixels -> clip space (y down)
     glUniform4f(locProj_, 2.0f / winW, -2.0f / winH, -1.0f, 1.0f);
     glUniform1i(locTex_, 0);
+    glUniform1i(locFlag_, 1);
+    glUniform2f(locMapSize_, 1, 1);
+    glUniform4f(locFlagRect_, 0, 0, 1, 1);
     glActiveTexture(GL_TEXTURE0);
     curTex_ = 0;
+    curMode_ = -1;
     verts_.clear();
 }
 
-void Gfx::use(GLuint tex, bool alphaTex) {
-    if (tex == curTex_ && alphaTex == curAlpha_) return;
+void Gfx::use(GLuint tex, int mode) {
+    if (tex == curTex_ && mode == curMode_) return;
     flush();
     curTex_ = tex;
-    curAlpha_ = alphaTex;
+    curMode_ = mode;
     glBindTexture(GL_TEXTURE_2D, tex);
-    glUniform1f(locAlpha_, alphaTex ? 1.0f : 0.0f);
+    glUniform1f(locMode_, (float)mode);
 }
 
 void Gfx::flush() {
@@ -183,7 +202,7 @@ void Gfx::quad(float x0, float y0, float x1, float y1, float u0, float v0, float
 static const float kSolidU = 1.5f / 512.0f, kSolidV = 1.5f / 256.0f;
 
 void Gfx::rect(float x, float y, float w, float h, uint32_t rgba) {
-    use(fontTex_, true);
+    use(fontTex_, 1);
     quad(x, y, x + w, y + h, kSolidU, kSolidV, kSolidU, kSolidV, rgba);
 }
 
@@ -195,7 +214,7 @@ void Gfx::frame(float x, float y, float w, float h, float t, uint32_t rgba) {
 }
 
 void Gfx::line(float x0, float y0, float x1, float y1, float t, uint32_t c) {
-    use(fontTex_, true);
+    use(fontTex_, 1);
     float dx = x1 - x0, dy = y1 - y0;
     float len = std::sqrt(dx * dx + dy * dy);
     if (len < 0.01f) return;
@@ -212,7 +231,7 @@ void Gfx::line(float x0, float y0, float x1, float y1, float t, uint32_t c) {
 }
 
 void Gfx::disc(float cx, float cy, float r, uint32_t c) {
-    use(fontTex_, true);
+    use(fontTex_, 1);
     const int n = 12;
     for (int k = 0; k < n; ++k) {
         float a0 = k * 6.2831853f / n, a1 = (k + 1) * 6.2831853f / n;
@@ -238,7 +257,7 @@ float Gfx::text(float x, float y, const std::string& s, float size, uint32_t rgb
     float w = textWidth(s, size);
     if (align == 1) x -= w * 0.5f;
     else if (align == 2) x -= w;
-    use(fontTex_, true);
+    use(fontTex_, 1);
     float sc = size / fontSize_;
     float pen = x;
     for (size_t k = 0; k < s.size(); ++k) {
@@ -318,7 +337,8 @@ void Gfx::setMap(const Game& g) {
     if (!mapTex_) glGenTextures(1, &mapTex_);
     glBindTexture(GL_TEXTURE_2D, mapTex_);
     curTex_ = 0;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // nearest: the flag marker colour must never be blended with its neighbours
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -333,6 +353,7 @@ uint16_t Gfx::tileColor(const Game& g, int t) const {
     bool border = (x > 0 && g.owner[t - 1] != o) || (x < mapW_ - 1 && g.owner[t + 1] != o) ||
                   (y > 0 && g.owner[t - mapW_] != o) || (y < mapH_ - 1 && g.owner[t + mapW_] != o);
     if (border) return playerBorder_[o];
+    if (flagTex_ && o == flagOwner_) return 0xF81F;  // pure magenta marker: the shader draws the flag here
     int r1, g1, b1, r2, g2, b2;
     unpack565(terrainPix_[t], r1, g1, b1);
     unpack565(playerCol_[o], r2, g2, b2);
@@ -380,13 +401,58 @@ void Gfx::updateMap(Game& g) {
     std::fill(dirty_.begin(), dirty_.end(), 0);
 }
 
-void Gfx::drawMap(float camX, float camY, float zoom) {
+void Gfx::drawMap(float camX, float camY, float zoom, const float* flagRect) {
     if (!mapTex_) return;
-    use(mapTex_, false);
+    bool flag = flagTex_ && flagRect;
+    if (flag) {
+        flush();
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, flagTex_);
+        glActiveTexture(GL_TEXTURE0);
+        glUniform2f(locMapSize_, (float)mapW_, (float)mapH_);
+        glUniform4f(locFlagRect_, flagRect[0], flagRect[1], std::max(1.0f, flagRect[2]), std::max(1.0f, flagRect[3]));
+    }
+    use(mapTex_, flag ? 2 : 0);
     float x0 = (0 - camX) * zoom + winW_ * 0.5f, y0 = (0 - camY) * zoom + winH_ * 0.5f;
     float x1 = (mapW_ - camX) * zoom + winW_ * 0.5f, y1 = (mapH_ - camY) * zoom + winH_ * 0.5f;
     quad(x0, y0, x1, y1, 0, 0, 1, 1, 0xffffffff);
     flush();
+}
+
+void Gfx::setFlag(const uint8_t* rgba, int w, int h) {
+    flush();
+    if (!rgba || w <= 0 || h <= 0) {
+        if (flagTex_) glDeleteTextures(1, &flagTex_);
+        flagTex_ = 0;
+        flagW_ = flagH_ = 0;
+        return;
+    }
+    if (!flagTex_) glGenTextures(1, &flagTex_);
+    glBindTexture(GL_TEXTURE_2D, flagTex_);
+    curTex_ = 0;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    flagW_ = w;
+    flagH_ = h;
+}
+
+void Gfx::refreshMap(const Game& g) {
+    if (!mapTex_ || g.map.w != mapW_ || g.map.h != mapH_) return;
+    for (int t = 0; t < mapW_ * mapH_; ++t) pix_[t] = tileColor(g, t);
+    flush();
+    glBindTexture(GL_TEXTURE_2D, mapTex_);
+    curTex_ = 0;
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mapW_, mapH_, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, &pix_[0]);
+}
+
+void Gfx::image(float x, float y, float w, float h) {
+    if (!flagTex_) return;
+    use(flagTex_, 0);
+    quad(x, y, x + w, y + h, 0, 0, 1, 1, 0xffffffff);
 }
 
 bool Gfx::screenshotBMP(const std::string& path) {

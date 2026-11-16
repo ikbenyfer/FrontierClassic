@@ -9,7 +9,7 @@
 
 namespace fc {
 
-enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME };
+enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG };
 enum Overlay { OV_NONE, OV_PAUSE, OV_GAMEOVER };
 
 class App {
@@ -34,6 +34,10 @@ public:
     void focusOnHuman(float zoom);
     void fitMap();
     std::string slotPath(const std::string& slot) const { return saveDir_ + slot + ".json"; }
+    // player flag: Documents/flag.png (chosen from Photos or copied in via iTunes/Filza)
+    bool loadFlag();
+    void setFlagPixels(const uint8_t* rgba, int w, int h);
+    void removeFlag();
 
 private:
     std::string resDir_, mapsDir_, saveDir_;
@@ -96,6 +100,8 @@ private:
     void renderNew();
     void renderLoad();
     void renderInfo();
+    void renderFlag();
+    bool flagRect(float out[4]) const;
     void renderGame();
     void renderWorldOverlays();
     void renderHUD();

@@ -27,7 +27,17 @@ public:
     // ---- map ----
     void setMap(const Game& g);
     void updateMap(Game& g);  // consumes g.changed
-    void drawMap(float camX, float camY, float zoom);
+    // flagRect: x, y, w, h in tiles where the player's flag is stretched (or null)
+    void drawMap(float camX, float camY, float zoom, const float* flagRect = 0);
+    void refreshMap(const Game& g);  // recolour every tile (after the flag changed)
+
+    // ---- player flag ----
+    void setFlag(const uint8_t* rgba, int w, int h);  // null = no flag
+    void setFlagOwner(int p) { flagOwner_ = p; }
+    bool hasFlag() const { return flagTex_ != 0; }
+    int flagW() const { return flagW_; }
+    int flagH() const { return flagH_; }
+    void image(float x, float y, float w, float h);  // draws the flag
     bool hasMap() const { return mapTex_ != 0; }
 
     // ---- 2D ----
@@ -53,8 +63,10 @@ private:
         uint8_t r, g, b, a;
     };
     GLuint prog_ = 0, fontTex_ = 0, mapTex_ = 0, curTex_ = 0;
-    GLint locProj_ = -1, locTex_ = -1, locAlpha_ = -1;
-    bool curAlpha_ = false;
+    GLint locProj_ = -1, locTex_ = -1, locMode_ = -1, locFlag_ = -1, locMapSize_ = -1, locFlagRect_ = -1;
+    int curMode_ = -1;  // 0 colour*texture, 1 text (alpha), 2 map with flag
+    GLuint flagTex_ = 0;
+    int flagW_ = 0, flagH_ = 0, flagOwner_ = 1;
     std::vector<Vtx> verts_;
     Glyph glyphs_[96];
     float fontSize_ = 30, fontAscent_ = 24;
@@ -69,7 +81,7 @@ private:
     int chunksX_ = 0, chunksY_ = 0;
     std::vector<uint16_t> playerCol_, playerBorder_;
 
-    void use(GLuint tex, bool alphaTex);
+    void use(GLuint tex, int mode);
     void quad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, uint32_t rgba);
     uint16_t tileColor(const Game& g, int t) const;
     void markDirty(int t);

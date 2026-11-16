@@ -158,6 +158,7 @@ jobs:
           test -f "$APP/maps/index.json" && test -f "$APP/maps/world.bin" && test -f "$APP/font/font.bin"
           test -f "$APP/Icon-76.png" && test -f "$APP/Default-Landscape~ipad.png"
           test -f "$APP/music/holding_the_ridge.mp3"
+          grep -q NSPhotoLibraryUsageDescription "$APP/Info.plist"
           ls "$APP" "$APP/maps"
           du -sh "$APP"
 

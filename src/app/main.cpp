@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include "App.h"
 #include "SDL.h"
 
@@ -146,6 +147,24 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     shot(app, win, dir + "/02_new_game.bmp");
     app.screen = SCR_INFO;
     shot(app, win, dir + "/03_info.bmp");
+
+    // a generated test flag (3 stripes + a diagonal band) to check flag rendering
+    {
+        const int fw = 120, fh = 80;
+        std::vector<unsigned char> px(fw * fh * 4);
+        for (int y = 0; y < fh; ++y)
+            for (int x = 0; x < fw; ++x) {
+                unsigned char* p = &px[(y * fw + x) * 4];
+                int band = y * 3 / fh;
+                unsigned char r = band == 0 ? 200 : (band == 1 ? 255 : 30), g = band == 0 ? 30 : (band == 1 ? 255 : 70),
+                              b = band == 0 ? 40 : (band == 1 ? 255 : 160);
+                if (std::abs(x * fh / fw - y) < 6) { r = 250; g = 200; b = 0; }
+                p[0] = r; p[1] = g; p[2] = b; p[3] = 255;
+            }
+        app.setFlagPixels(&px[0], fw, fh);
+    }
+    app.screen = SCR_FLAG;
+    shot(app, win, dir + "/03b_flag.bmp");
 
     Settings s;
     s.mapId = "world";
