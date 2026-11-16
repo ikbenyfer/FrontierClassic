@@ -1000,7 +1000,7 @@ void App::renderNew() {
     gfx.text(x0, y, "Kaart", 22, C_ACCENT);
     y += 32;
     for (size_t k = 0; k < maps_.size(); ++k) {
-        float bx = x0 + (k % 3) * 318, by = y + (k / 3) * 62;
+        float bx = x0 + (k % 4) * 238, by = y + (k / 4) * 52;
         if (button(bx, by, 232, 46, maps_[k].name, maps_[k].id == s.mapId)) s.mapId = maps_[k].id;
     }
     y += (float)((maps_.size() + 3) / 4) * 52 + 10;
