@@ -34,6 +34,7 @@ public:
 
     size_t size() const { return t_ == ARR ? a_.size() : (t_ == OBJ ? o_.size() : 0); }
     const JVal& operator[](size_t idx) const;
+    const JVal& operator[](int idx) const { return idx < 0 ? (*this)[(size_t)-1] : (*this)[(size_t)idx]; }
     const JVal& operator[](const char* key) const;
     bool has(const char* key) const;
 
