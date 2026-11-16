@@ -1,5 +1,7 @@
 // Headless tests for the simulation: every map, every mode, 50 AIs.
 //   sim_test <maps dir> [ticks]
+#include <stdlib.h>
+#include <string.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>

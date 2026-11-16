@@ -1,6 +1,8 @@
 // Frontier Classic - entry point (SDL2 + OpenGL ES 2.0).
 // iOS: landscape only, 30 fps cap, autosave when the app goes to the background.
 // Desktop (tests): "--shots <dir>" renders a scripted set of screenshots and exits.
+#include <stdlib.h>
+#include <string.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

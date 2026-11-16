@@ -122,7 +122,7 @@ jobs:
 
       - name: App bouwen
         working-directory: project
-        run: make -j4 clean package FINALPACKAGE=1 messages=no
+        run: make -k -j4 clean package FINALPACKAGE=1 messages=no
 
       - name: Controleren (armv7, iOS 9.3, geen netwerk)
         working-directory: project

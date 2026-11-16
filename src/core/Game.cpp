@@ -1,4 +1,6 @@
 #include "Game.h"
+#include <stdlib.h>
+#include <string.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>

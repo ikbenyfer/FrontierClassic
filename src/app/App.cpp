@@ -1,4 +1,6 @@
 #include "App.h"
+#include <stdlib.h>
+#include <string.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -435,7 +437,7 @@ void App::renderNew() {
     y += 34;
 
     // numbers
-    float col2 = x0 + 480;
+    float col2 = x0 + 470;
     gfx.text(x0, y + 14, "AI-tegenstanders", 22, C_TEXT);
     if (button(x0 + 210, y, 54, 50, "-")) s.numAI = std::max(10, s.numAI - 5);
     char buf[64];
@@ -445,7 +447,7 @@ void App::renderNew() {
 
     gfx.text(col2, y + 14, "AI-niveau", 22, C_TEXT);
     for (int d = 0; d < 3; ++d)
-        if (button(col2 + 120 + d * 136, y, 128, 50, difficultyName(d), s.difficulty == d)) s.difficulty = d;
+        if (button(col2 + 110 + d * 124, y, 118, 50, difficultyName(d), s.difficulty == d)) s.difficulty = d;
     y += 64;
 
     bool showTeams = s.mode == MODE_TEAMS || (s.mode == MODE_CUSTOM && s.customTeams);
@@ -564,7 +566,7 @@ void App::renderWorldOverlays() {
     const int W = game.map.w;
     // buildings
     if (zoom_ >= 1.2f) {
-        float s = std::max(10.0f, std::min(26.0f, zoom_ * 3.0f));
+        float s = std::max(13.0f, std::min(28.0f, zoom_ * 3.5f));
         static const char* letter[B_COUNT] = {"S", "$", "M", "F"};
         for (size_t k = 0; k < game.buildings.size(); ++k) {
             const Building& b = game.buildings[k];
@@ -849,7 +851,7 @@ void App::renderPause() {
         overlay = OV_NONE;
     }
     cy += 76;
-    if (button(bx, cy, bw, 60, "Hoofdmenu (slaat automatisch op)")) {
+    if (button(bx, cy, bw, 60, "Hoofdmenu")) {
         autosave();
         screen = SCR_MENU;
         overlay = OV_NONE;

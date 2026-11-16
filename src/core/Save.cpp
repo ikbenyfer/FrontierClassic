@@ -1,5 +1,7 @@
 // Saving and loading a game as a local JSON file.
 #include "Game.h"
+#include <stdlib.h>
+#include <string.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

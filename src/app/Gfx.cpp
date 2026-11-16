@@ -1,4 +1,6 @@
 #include "Gfx.h"
+#include <stdlib.h>
+#include <string.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -291,8 +293,9 @@ void Gfx::setMap(const Game& g) {
     for (int t = 0; t < n; ++t) {
         int tr = g.map.terrain(t);
         if (tr > 6) tr = 2;
-        uint32_t h = (uint32_t)t * 2654435761u;
-        int v = (int)((h >> 27) & 7) - 3;  // small per-tile variation
+        uint32_t h = (uint32_t)t;  // small per-tile colour noise (well mixed: no stripes)
+        h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15; h *= 0x846ca68bu; h ^= h >> 16;
+        int v = (int)(h & 7) - 3;
         double f = g.map.countryBorder(t) ? 0.82 : 1.0;
         terrainPix_[t] = rgb565((int)((kTerrainRGB[tr][0] + v * 2) * f), (int)((kTerrainRGB[tr][1] + v * 2) * f),
                                 (int)((kTerrainRGB[tr][2] + v * 2) * f));
