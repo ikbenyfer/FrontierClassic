@@ -27,7 +27,9 @@ docker compose up -d --build
 
 **Synology Container Manager:** Project > Maken > kies deze map > de `docker-compose.yml` wordt herkend > Volgende > Gereed.
 
-**Andere NAS (QNAP, Unraid, TrueNAS, Portainer):** maak een "stack" of "compose project" van deze map.
+**Portainer:** zie het stuk "Via Portainer" hieronder.
+
+**Andere NAS (QNAP, Unraid, TrueNAS):** maak een "stack" of "compose project" van deze map.
 De NAS heeft bij de eerste keer bouwen internet nodig (om de kleine Alpine-bouwomgeving te downloaden).
 
 Controleren of hij draait:
@@ -37,6 +39,33 @@ docker compose logs
 ```
 
 Je ziet dan `Frontier Classic relay listening on TCP port 47800`, en later regels als `room opened: yfer`.
+
+## Via Portainer
+
+De **Web editor** van Portainer werkt hier niet: daar plak je alleen de compose-tekst, en de server moet
+gebouwd worden uit `relay.cpp`. Gebruik daarom **Repository**: Portainer haalt deze map zelf uit GitHub en bouwt hem op de NAS.
+
+**1. Leessleutel maken op GitHub** (de repo is privé):
+GitHub > Settings > Developer settings > Personal access tokens > **Fine-grained tokens** > Generate new token.
+- Repository access: **Only select repositories** > `FrontierClassic`
+- Permissions > Repository permissions > **Contents: Read-only** (verder niets)
+- Kopieer de sleutel (begint met `github_pat_`). Deel hem met niemand.
+
+**2. Stack maken in Portainer:** Stacks > **Add stack**
+- Name: `frontier-relay`
+- Build method: **Repository**
+- Repository URL: `https://github.com/ikbenyfer/FrontierClassic`
+- Repository reference: `refs/heads/main`
+- Compose path: `server/docker-compose.yml`
+- **Authentication** aan: username `ikbenyfer`, Personal Access Token: de sleutel van stap 1
+- Optioneel: **GitOps updates** aan (polling, bijv. elke 24h): dan bouwt Portainer de server opnieuw als hij op GitHub verandert
+- Klik **Deploy the stack** (de eerste keer bouwen duurt 1 tot 3 minuten)
+
+**3. Controleren:** Containers > `frontier-relay` > **Logs**. Je ziet `Frontier Classic relay listening on TCP port 47800`.
+
+**Lukt het bouwen niet** (bijv. "build is not supported" op een oude Portainer of in een Swarm-omgeving)?
+Bouw dan een keer via SSH op de NAS in deze map: `docker compose build`. Daarna kun je in Portainer bij
+Web editor een stack maken met dezelfde compose-tekst, maar zonder de regel `build: .`.
 
 ## In het spel
 
