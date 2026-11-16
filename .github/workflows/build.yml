@@ -77,7 +77,10 @@ jobs:
       - name: Linux-pakketten
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential fakeroot rsync curl perl zip unzip git libxml2 libtinfo6 file
+          sudo apt-get install -y build-essential fakeroot rsync curl perl zip unzip git file
+          # package names differ between Ubuntu versions
+          sudo apt-get install -y libxml2 || sudo apt-get install -y libxml2-16
+          sudo apt-get install -y libtinfo6 || true
 
       - name: Theos
         run: git clone --recursive --depth=1 https://github.com/theos/theos.git "$THEOS"
