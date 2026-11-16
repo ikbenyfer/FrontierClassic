@@ -537,6 +537,7 @@ bool Game::nearForeign(int tile, int p, int r) const {
 }
 
 bool Game::canBuildHere(int p, int type, int tile, std::string* why) const {
+    (void)type;  // every building type may stand anywhere on own land
     if (tile < 0 || tile >= map.w * map.h || owner[tile] != p) {
         if (why) *why = "Je kunt alleen op je eigen land bouwen";
         return false;
