@@ -50,7 +50,7 @@ gebouwd worden uit `relay.cpp`. Gebruik daarom **Repository**: Portainer haalt d
 - Build method: **Repository**
 - Repository URL: `https://github.com/ikbenyfer/FrontierClassic`
 - Repository reference: `refs/heads/main`
-- Compose path: `server/docker-compose.yml`
+- Compose path: `docker-compose.yml` (de standaardwaarde; `server/docker-compose.yml` werkt ook)
 - **Authentication**: uit laten (de repo is openbaar)
 - Optioneel: **GitOps updates** aan (polling, bijv. elke 24h): dan bouwt Portainer de server opnieuw als hij op GitHub verandert
 - Klik **Deploy the stack** (de eerste keer bouwen duurt 1 tot 3 minuten)

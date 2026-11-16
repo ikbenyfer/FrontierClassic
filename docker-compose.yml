@@ -1,0 +1,25 @@
+# Frontier Classic relay server (same as server/docker-compose.yml; here so Portainer finds it
+# with its default compose path). Details: server/LEESMIJ.md
+#   start / update:  docker compose up -d --build
+#   logs:            docker compose logs -f
+#   stop:            docker compose down
+services:
+  frontier-relay:
+    build: ./server
+    image: frontier-relay:latest
+    container_name: frontier-relay
+    restart: unless-stopped
+    ports:
+      - "47800:47800/tcp"     # left side = port on the NAS; forward this TCP port in your router to the NAS
+    mem_limit: 64m            # it normally uses only a few MB
+    cpus: 0.5
+    read_only: true           # the server writes nothing to disk
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "2"
