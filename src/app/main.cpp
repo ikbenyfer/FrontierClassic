@@ -307,6 +307,21 @@ int main(int argc, char* argv[]) {
     for (int k = 1; k + 1 < argc; ++k)
         if (!strcmp(argv[k], "--shots")) shotsDir = argv[k + 1];
 
+    // self-test of the public IP lookup: prints the result and exits (no window)
+    for (int k = 1; k < argc; ++k)
+        if (!strcmp(argv[k], "--public-ip")) {
+            netInit();
+            PublicIp ip;
+            ip.start();
+            for (int i = 0; i < 2500 && ip.busy(); ++i) {
+                ip.pump();
+                SDL_Delay(10);
+            }
+            printf(ip.ip().empty() ? "PUBLIC_IP: not found%s" : "PUBLIC_IP: %s", ip.ip().c_str());
+            printf("\n");
+            return ip.ip().empty() ? 1 : 0;
+        }
+
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
     SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "1");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
