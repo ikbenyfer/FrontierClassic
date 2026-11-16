@@ -1,0 +1,192 @@
+name: Bouw Frontier Classic
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  SDL_VERSION: 2.0.22
+  SDL_SHA256: fe7cbf3127882e3fc7259a75a0cb585620272c51745d3852ab9dd87960697f2e
+
+jobs:
+  tests:
+    name: Simulatie-tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compileren (gcc en clang, C++11, strenge waarschuwingen)
+        run: |
+          g++ -std=c++11 -O2 -Wall -Wextra -Werror src/core/*.cpp tests/sim_test.cpp -o sim_test
+          clang++ -std=c++11 -O2 -Wall -Wextra -Werror src/core/*.cpp tests/sim_test.cpp -o sim_test_clang
+
+      - name: Alle kaarten en spelmodi draaien (50 AI)
+        run: ./sim_test Resources/maps 3000
+
+      - name: Geheugencontrole (AddressSanitizer + UBSan)
+        run: |
+          g++ -std=c++11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=all src/core/*.cpp tests/sim_test.cpp -o sim_test_asan
+          ./sim_test_asan Resources/maps 600
+
+  screenshots:
+    name: Schermafbeeldingen (Linux, OpenGL ES 2.0 via Mesa)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pakketten
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libgles-dev libegl-dev libgl1-mesa-dri xvfb imagemagick
+
+      - name: Desktopversie bouwen
+        run: |
+          g++ -std=c++11 -O2 -Wall -Wextra src/core/*.cpp src/app/*.cpp $(sdl2-config --cflags) \
+            $(sdl2-config --libs) -lGLESv2 -o frontier_desktop
+
+      - name: Spel automatisch spelen en fotograferen
+        env:
+          SDL_VIDEO_X11_FORCE_EGL: "1"
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          mkdir -p shots
+          xvfb-run -a -s "-screen 0 1024x768x24" ./frontier_desktop --shots shots
+          for f in shots/*.bmp; do convert "$f" "${f%.bmp}.png" && rm "$f"; done
+          ls -l shots
+          test "$(ls shots/*.png | wc -l)" -ge 9
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots/*.png
+
+  ios:
+    name: iPad-app bouwen (iOS 9.3, armv7)
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      THEOS: ${{ github.workspace }}/theos
+      SDK_NAME: iPhoneOS14.5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: project
+
+      - name: Linux-pakketten
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential fakeroot rsync curl perl zip unzip git libxml2 libtinfo6 file
+
+      - name: Theos
+        run: git clone --recursive --depth=1 https://github.com/theos/theos.git "$THEOS"
+
+      - name: iOS-toolchain (compiler en linker)
+        run: |
+          mkdir -p "$THEOS/toolchain"
+          curl -fsSL "https://github.com/L1ghtmann/llvm-project/releases/latest/download/iOSToolchain-x86_64.tar.xz" \
+            | tar -xJf - -C "$THEOS/toolchain/"
+          ls "$THEOS/toolchain/linux/iphone/bin"
+
+      - name: ldid (nep-ondertekening)
+        run: |
+          TC="$THEOS/toolchain/linux/iphone/bin"
+          if command -v ldid >/dev/null 2>&1; then echo "ldid: $(command -v ldid)"
+          elif [ -x "$TC/ldid" ]; then sudo ln -sf "$TC/ldid" /usr/local/bin/ldid
+          else
+            sudo curl -fsSL -o /usr/local/bin/ldid "https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64"
+            sudo chmod +x /usr/local/bin/ldid
+          fi
+
+      - name: iOS ${{ env.SDK_NAME }} SDK
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          "$THEOS/bin/install-sdk" "$SDK_NAME"
+          rm -rf "$THEOS/sdks/$SDK_NAME.sdk/System/Library/PrivateFrameworks/WebKit.framework"
+
+      - name: SDL ${{ env.SDL_VERSION }} (broncode, gecontroleerd met SHA-256)
+        working-directory: project
+        run: |
+          curl -fsSL -o sdl.tar.gz "https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL2-$SDL_VERSION.tar.gz"
+          echo "$SDL_SHA256  sdl.tar.gz" | sha256sum -c -
+          mkdir -p third_party
+          tar xzf sdl.tar.gz -C third_party
+          mv "third_party/SDL2-$SDL_VERSION" third_party/SDL2
+          cat ios/SDL_config_overrides.h >> third_party/SDL2/include/SDL_config_iphoneos.h
+          tail -5 third_party/SDL2/include/SDL_config_iphoneos.h
+
+      - name: App bouwen
+        working-directory: project
+        run: make -j4 clean package FINALPACKAGE=1 messages=no
+
+      - name: Controleren (armv7, iOS 9.3, geen netwerk)
+        working-directory: project
+        run: |
+          set -e
+          APP=".theos/_/Applications/FrontierClassic.app"
+          BIN="$APP/FrontierClassic"
+          TC="$THEOS/toolchain/linux/iphone/bin"
+          echo "== architectuur"
+          file "$BIN"
+          ARCH="$("$TC/lipo" -info "$BIN")"
+          echo "$ARCH"
+          echo "$ARCH" | grep -q "armv7" || { echo "::error::geen armv7"; exit 1; }
+          if echo "$ARCH" | grep -q "arm64"; then echo "::error::onverwacht arm64"; exit 1; fi
+          echo "== minimale iOS-versie"
+          "$TC/otool" -l "$BIN" | grep -A4 -E "LC_VERSION_MIN_IPHONEOS|LC_BUILD_VERSION" | tee minver.txt
+          grep -qE "version 9\.3|minos 9\.3" minver.txt || { echo "::error::minimale iOS-versie is niet 9.3"; exit 1; }
+          echo "== gekoppelde frameworks"
+          "$TC/otool" -L "$BIN" | tee libs.txt
+          if grep -qiE "CFNetwork|Network.framework|WebKit|SystemConfiguration|libnetwork|Security.framework" libs.txt; then
+            echo "::error::netwerk- of webframework gevonden"; exit 1
+          fi
+          echo "== netwerkfuncties in de binary"
+          "$TC/nm" -u "$BIN" > undef.txt || true
+          if grep -E "^ *_(socket|connect|getaddrinfo|gethostbyname|send|recv|sendto|recvfrom)$|NSURLSession|NSURLConnection|CFStream|CFSocket" undef.txt; then
+            echo "::error::netwerkfuncties gevonden"; exit 1
+          fi
+          echo "geen netwerkfuncties"
+          echo "== Info.plist"
+          grep -A1 -E "MinimumOSVersion|CFBundleIdentifier" "$APP/Info.plist"
+          grep -q "UIInterfaceOrientationPortrait" "$APP/Info.plist" && { echo "::error::portrait staat aan"; exit 1; } || true
+          echo "== bestanden"
+          test -f "$APP/maps/index.json" && test -f "$APP/maps/world.bin" && test -f "$APP/font/font.bin"
+          test -f "$APP/Icon-76.png" && test -f "$APP/Default-Landscape~ipad.png"
+          ls "$APP" "$APP/maps"
+          du -sh "$APP"
+
+      - name: IPA maken en controleren
+        working-directory: project
+        run: |
+          rm -rf ipa && mkdir -p ipa/Payload
+          cp -R ".theos/_/Applications/FrontierClassic.app" ipa/Payload/
+          (cd ipa && zip -qr ../packages/FrontierClassic.ipa Payload)
+          unzip -l packages/FrontierClassic.ipa | grep -E "Payload/FrontierClassic.app/(FrontierClassic|Info.plist|maps/world.bin)$"
+          ls -l packages
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FrontierClassic
+          path: |
+            project/packages/*.ipa
+            project/packages/*.deb
+
+      - name: Release op GitHub
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: project
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION=$(grep '^Version:' control | awk '{print $2}')
+          TAG="v$VERSION"
+          cp packages/FrontierClassic.ipa "packages/FrontierClassic-$VERSION.ipa"
+          DEB=$(ls packages/*.deb | head -1)
+          printf 'Frontier Classic %s voor iPad 2 (iOS 9.3.5, armv7). Volledig offline.\n\nInstalleren: iPad IPA Installer (USB) of Filza, met AppSync Unified.\n' "$VERSION" > notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "packages/FrontierClassic-$VERSION.ipa" "$DEB" --clobber
+          else
+            gh release create "$TAG" "packages/FrontierClassic-$VERSION.ipa" "$DEB" --title "Frontier Classic $VERSION" --notes-file notes.md --target "$GITHUB_SHA" --latest
+          fi

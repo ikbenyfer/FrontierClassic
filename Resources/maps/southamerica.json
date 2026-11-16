@@ -1,0 +1,110 @@
+{
+ "id": "southamerica",
+ "name": "South America",
+ "width": 620,
+ "height": 760,
+ "file": "southamerica.bin",
+ "landTiles": 169327,
+ "nations": [
+  {
+   "name": "Brazil",
+   "x": 388,
+   "y": 265
+  },
+  {
+   "name": "Argentina",
+   "x": 268,
+   "y": 526
+  },
+  {
+   "name": "Peru",
+   "x": 176,
+   "y": 247
+  },
+  {
+   "name": "Colombia",
+   "x": 189,
+   "y": 107
+  },
+  {
+   "name": "Bolivia",
+   "x": 273,
+   "y": 328
+  },
+  {
+   "name": "Venezuela",
+   "x": 258,
+   "y": 73
+  },
+  {
+   "name": "Chile",
+   "x": 206,
+   "y": 532
+  },
+  {
+   "name": "Paraguay",
+   "x": 335,
+   "y": 398
+  },
+  {
+   "name": "Ecuador",
+   "x": 136,
+   "y": 165
+  },
+  {
+   "name": "Guyana",
+   "x": 330,
+   "y": 98
+  },
+  {
+   "name": "Uruguay",
+   "x": 359,
+   "y": 500
+  },
+  {
+   "name": "Suriname",
+   "x": 360,
+   "y": 105
+  },
+  {
+   "name": "Nicaragua",
+   "x": 69,
+   "y": 12
+  },
+  {
+   "name": "France",
+   "x": 387,
+   "y": 107
+  },
+  {
+   "name": "Panama",
+   "x": 118,
+   "y": 58
+  },
+  {
+   "name": "Costa Rica",
+   "x": 78,
+   "y": 43
+  },
+  {
+   "name": "El Salvador",
+   "x": 31,
+   "y": 2
+  },
+  {
+   "name": "Falkland Is.",
+   "x": 332,
+   "y": 703
+  },
+  {
+   "name": "S. Geo. and the Is.",
+   "x": 553,
+   "y": 731
+  },
+  {
+   "name": "Trinidad and Tobago",
+   "x": 307,
+   "y": 38
+  }
+ ]
+}

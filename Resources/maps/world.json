@@ -1,0 +1,410 @@
+{
+ "id": "world",
+ "name": "World Map",
+ "width": 1024,
+ "height": 400,
+ "file": "world.bin",
+ "landTiles": 133829,
+ "nations": [
+  {
+   "name": "Russia",
+   "x": 793,
+   "y": 53
+  },
+  {
+   "name": "Canada",
+   "x": 220,
+   "y": 63
+  },
+  {
+   "name": "China",
+   "x": 807,
+   "y": 125
+  },
+  {
+   "name": "United States of America",
+   "x": 229,
+   "y": 117
+  },
+  {
+   "name": "Brazil",
+   "x": 360,
+   "y": 263
+  },
+  {
+   "name": "Australia",
+   "x": 894,
+   "y": 306
+  },
+  {
+   "name": "Greenland",
+   "x": 394,
+   "y": 15
+  },
+  {
+   "name": "Kazakhstan",
+   "x": 703,
+   "y": 92
+  },
+  {
+   "name": "India",
+   "x": 738,
+   "y": 165
+  },
+  {
+   "name": "Argentina",
+   "x": 326,
+   "y": 333
+  },
+  {
+   "name": "Algeria",
+   "x": 519,
+   "y": 150
+  },
+  {
+   "name": "Dem. Rep. Congo",
+   "x": 579,
+   "y": 240
+  },
+  {
+   "name": "Mongolia",
+   "x": 805,
+   "y": 96
+  },
+  {
+   "name": "Mexico",
+   "x": 220,
+   "y": 162
+  },
+  {
+   "name": "Saudi Arabia",
+   "x": 638,
+   "y": 161
+  },
+  {
+   "name": "Sudan",
+   "x": 597,
+   "y": 185
+  },
+  {
+   "name": "Iran",
+   "x": 666,
+   "y": 137
+  },
+  {
+   "name": "Libya",
+   "x": 563,
+   "y": 153
+  },
+  {
+   "name": "South Africa",
+   "x": 583,
+   "y": 315
+  },
+  {
+   "name": "Chad",
+   "x": 565,
+   "y": 187
+  },
+  {
+   "name": "Mali",
+   "x": 501,
+   "y": 181
+  },
+  {
+   "name": "Peru",
+   "x": 300,
+   "y": 258
+  },
+  {
+   "name": "Angola",
+   "x": 561,
+   "y": 267
+  },
+  {
+   "name": "Niger",
+   "x": 538,
+   "y": 181
+  },
+  {
+   "name": "Ethiopia",
+   "x": 624,
+   "y": 206
+  },
+  {
+   "name": "Colombia",
+   "x": 304,
+   "y": 220
+  },
+  {
+   "name": "Bolivia",
+   "x": 328,
+   "y": 280
+  },
+  {
+   "name": "Egypt",
+   "x": 596,
+   "y": 155
+  },
+  {
+   "name": "Mauritania",
+   "x": 482,
+   "y": 173
+  },
+  {
+   "name": "Pakistan",
+   "x": 709,
+   "y": 145
+  },
+  {
+   "name": "Turkey",
+   "x": 612,
+   "y": 118
+  },
+  {
+   "name": "Sweden",
+   "x": 559,
+   "y": 49
+  },
+  {
+   "name": "Tanzania",
+   "x": 610,
+   "y": 250
+  },
+  {
+   "name": "Nigeria",
+   "x": 535,
+   "y": 204
+  },
+  {
+   "name": "Venezuela",
+   "x": 323,
+   "y": 211
+  },
+  {
+   "name": "Namibia",
+   "x": 560,
+   "y": 296
+  },
+  {
+   "name": "Ukraine",
+   "x": 600,
+   "y": 89
+  },
+  {
+   "name": "Mozambique",
+   "x": 613,
+   "y": 281
+  },
+  {
+   "name": "Chile",
+   "x": 309,
+   "y": 335
+  },
+  {
+   "name": "France",
+   "x": 518,
+   "y": 96
+  },
+  {
+   "name": "Zambia",
+   "x": 591,
+   "y": 270
+  },
+  {
+   "name": "Afghanistan",
+   "x": 699,
+   "y": 133
+  },
+  {
+   "name": "Finland",
+   "x": 586,
+   "y": 44
+  },
+  {
+   "name": "Norway",
+   "x": 551,
+   "y": 45
+  },
+  {
+   "name": "Myanmar",
+   "x": 786,
+   "y": 170
+  },
+  {
+   "name": "Morocco",
+   "x": 487,
+   "y": 145
+  },
+  {
+   "name": "Spain",
+   "x": 501,
+   "y": 114
+  },
+  {
+   "name": "Madagascar",
+   "x": 644,
+   "y": 288
+  },
+  {
+   "name": "S. Sudan",
+   "x": 598,
+   "y": 210
+  },
+  {
+   "name": "Botswana",
+   "x": 579,
+   "y": 296
+  },
+  {
+   "name": "Central African Rep.",
+   "x": 570,
+   "y": 212
+  },
+  {
+   "name": "Turkmenistan",
+   "x": 680,
+   "y": 118
+  },
+  {
+   "name": "Uzbekistan",
+   "x": 691,
+   "y": 110
+  },
+  {
+   "name": "Kenya",
+   "x": 619,
+   "y": 230
+  },
+  {
+   "name": "Germany",
+   "x": 541,
+   "y": 83
+  },
+  {
+   "name": "Thailand",
+   "x": 799,
+   "y": 188
+  },
+  {
+   "name": "Indonesia",
+   "x": 836,
+   "y": 232
+  },
+  {
+   "name": "Iraq",
+   "x": 636,
+   "y": 136
+  },
+  {
+   "name": "Poland",
+   "x": 567,
+   "y": 80
+  },
+  {
+   "name": "Somalia",
+   "x": 642,
+   "y": 218
+  },
+  {
+   "name": "Cameroon",
+   "x": 548,
+   "y": 215
+  },
+  {
+   "name": "Yemen",
+   "x": 647,
+   "y": 185
+  },
+  {
+   "name": "Paraguay",
+   "x": 345,
+   "y": 299
+  },
+  {
+   "name": "Zimbabwe",
+   "x": 596,
+   "y": 286
+  },
+  {
+   "name": "Papua New Guinea",
+   "x": 922,
+   "y": 251
+  },
+  {
+   "name": "United Kingdom",
+   "x": 504,
+   "y": 75
+  },
+  {
+   "name": "Belarus",
+   "x": 591,
+   "y": 76
+  },
+  {
+   "name": "Congo",
+   "x": 555,
+   "y": 234
+  },
+  {
+   "name": "Italy",
+   "x": 546,
+   "y": 105
+  },
+  {
+   "name": "Vietnam",
+   "x": 816,
+   "y": 183
+  },
+  {
+   "name": "Romania",
+   "x": 583,
+   "y": 98
+  },
+  {
+   "name": "Oman",
+   "x": 671,
+   "y": 172
+  },
+  {
+   "name": "C\u00f4te d'Ivoire",
+   "x": 496,
+   "y": 209
+  },
+  {
+   "name": "Japan",
+   "x": 904,
+   "y": 125
+  },
+  {
+   "name": "Burkina Faso",
+   "x": 507,
+   "y": 196
+  },
+  {
+   "name": "Kyrgyzstan",
+   "x": 724,
+   "y": 111
+  },
+  {
+   "name": "Gabon",
+   "x": 545,
+   "y": 233
+  },
+  {
+   "name": "Guinea",
+   "x": 480,
+   "y": 201
+  },
+  {
+   "name": "Ecuador",
+   "x": 289,
+   "y": 236
+  },
+  {
+   "name": "Uganda",
+   "x": 604,
+   "y": 228
+  }
+ ]
+}

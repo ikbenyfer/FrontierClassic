@@ -1,0 +1,10 @@
+.theos/
+packages/
+third_party/
+obj/
+ipa/
+*.o
+sim_test*
+frontier_desktop
+shots/
+test_save_*.json

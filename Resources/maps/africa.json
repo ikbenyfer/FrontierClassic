@@ -1,0 +1,350 @@
+{
+ "id": "africa",
+ "name": "Africa",
+ "width": 740,
+ "height": 740,
+ "file": "africa.bin",
+ "landTiles": 294784,
+ "nations": [
+  {
+   "name": "Algeria",
+   "x": 223,
+   "y": 98
+  },
+  {
+   "name": "Dem. Rep. Congo",
+   "x": 430,
+   "y": 408
+  },
+  {
+   "name": "Saudi Arabia",
+   "x": 636,
+   "y": 138
+  },
+  {
+   "name": "Sudan",
+   "x": 492,
+   "y": 220
+  },
+  {
+   "name": "Iran",
+   "x": 732,
+   "y": 54
+  },
+  {
+   "name": "Libya",
+   "x": 375,
+   "y": 109
+  },
+  {
+   "name": "South Africa",
+   "x": 445,
+   "y": 670
+  },
+  {
+   "name": "Chad",
+   "x": 381,
+   "y": 226
+  },
+  {
+   "name": "Mali",
+   "x": 162,
+   "y": 206
+  },
+  {
+   "name": "Angola",
+   "x": 370,
+   "y": 503
+  },
+  {
+   "name": "Niger",
+   "x": 289,
+   "y": 205
+  },
+  {
+   "name": "Ethiopia",
+   "x": 588,
+   "y": 293
+  },
+  {
+   "name": "Egypt",
+   "x": 491,
+   "y": 115
+  },
+  {
+   "name": "Mauritania",
+   "x": 95,
+   "y": 177
+  },
+  {
+   "name": "Tanzania",
+   "x": 540,
+   "y": 442
+  },
+  {
+   "name": "Nigeria",
+   "x": 277,
+   "y": 284
+  },
+  {
+   "name": "Namibia",
+   "x": 367,
+   "y": 601
+  },
+  {
+   "name": "Mozambique",
+   "x": 547,
+   "y": 552
+  },
+  {
+   "name": "Zambia",
+   "x": 471,
+   "y": 514
+  },
+  {
+   "name": "Morocco",
+   "x": 113,
+   "y": 81
+  },
+  {
+   "name": "Madagascar",
+   "x": 658,
+   "y": 573
+  },
+  {
+   "name": "S. Sudan",
+   "x": 495,
+   "y": 306
+  },
+  {
+   "name": "Botswana",
+   "x": 432,
+   "y": 601
+  },
+  {
+   "name": "Central African Rep.",
+   "x": 399,
+   "y": 314
+  },
+  {
+   "name": "Kenya",
+   "x": 570,
+   "y": 373
+  },
+  {
+   "name": "Iraq",
+   "x": 628,
+   "y": 49
+  },
+  {
+   "name": "Somalia",
+   "x": 648,
+   "y": 332
+  },
+  {
+   "name": "Cameroon",
+   "x": 323,
+   "y": 323
+  },
+  {
+   "name": "Yemen",
+   "x": 666,
+   "y": 220
+  },
+  {
+   "name": "Zimbabwe",
+   "x": 491,
+   "y": 570
+  },
+  {
+   "name": "Congo",
+   "x": 347,
+   "y": 388
+  },
+  {
+   "name": "C\u00f4te d'Ivoire",
+   "x": 142,
+   "y": 303
+  },
+  {
+   "name": "Burkina Faso",
+   "x": 180,
+   "y": 257
+  },
+  {
+   "name": "Gabon",
+   "x": 313,
+   "y": 385
+  },
+  {
+   "name": "Guinea",
+   "x": 89,
+   "y": 275
+  },
+  {
+   "name": "Uganda",
+   "x": 516,
+   "y": 367
+  },
+  {
+   "name": "Ghana",
+   "x": 185,
+   "y": 300
+  },
+  {
+   "name": "Syria",
+   "x": 577,
+   "y": 29
+  },
+  {
+   "name": "Senegal",
+   "x": 54,
+   "y": 236
+  },
+  {
+   "name": "Tunisia",
+   "x": 291,
+   "y": 38
+  },
+  {
+   "name": "Somaliland",
+   "x": 653,
+   "y": 282
+  },
+  {
+   "name": "Eritrea",
+   "x": 580,
+   "y": 226
+  },
+  {
+   "name": "Malawi",
+   "x": 535,
+   "y": 512
+  },
+  {
+   "name": "Benin",
+   "x": 220,
+   "y": 283
+  },
+  {
+   "name": "Jordan",
+   "x": 560,
+   "y": 67
+  },
+  {
+   "name": "W. Sahara",
+   "x": 76,
+   "y": 137
+  },
+  {
+   "name": "Liberia",
+   "x": 105,
+   "y": 315
+  },
+  {
+   "name": "United Arab Emirates",
+   "x": 733,
+   "y": 140
+  },
+  {
+   "name": "Sierra Leone",
+   "x": 81,
+   "y": 294
+  },
+  {
+   "name": "Togo",
+   "x": 206,
+   "y": 294
+  },
+  {
+   "name": "Lesotho",
+   "x": 475,
+   "y": 675
+  },
+  {
+   "name": "Italy",
+   "x": 336,
+   "y": 4
+  },
+  {
+   "name": "Guinea-Bissau",
+   "x": 50,
+   "y": 259
+  },
+  {
+   "name": "Burundi",
+   "x": 492,
+   "y": 413
+  },
+  {
+   "name": "Israel",
+   "x": 540,
+   "y": 65
+  },
+  {
+   "name": "Rwanda",
+   "x": 492,
+   "y": 399
+  },
+  {
+   "name": "Eq. Guinea",
+   "x": 300,
+   "y": 364
+  },
+  {
+   "name": "Djibouti",
+   "x": 617,
+   "y": 262
+  },
+  {
+   "name": "Kuwait",
+   "x": 666,
+   "y": 86
+  },
+  {
+   "name": "eSwatini",
+   "x": 507,
+   "y": 645
+  },
+  {
+   "name": "Qatar",
+   "x": 702,
+   "y": 126
+  },
+  {
+   "name": "Lebanon",
+   "x": 551,
+   "y": 40
+  },
+  {
+   "name": "Gambia",
+   "x": 45,
+   "y": 245
+  },
+  {
+   "name": "Greece",
+   "x": 442,
+   "y": 27
+  },
+  {
+   "name": "Palestine",
+   "x": 545,
+   "y": 60
+  },
+  {
+   "name": "Cyprus",
+   "x": 522,
+   "y": 30
+  },
+  {
+   "name": "N. Cyprus",
+   "x": 528,
+   "y": 27
+  },
+  {
+   "name": "Spain",
+   "x": 34,
+   "y": 97
+  }
+ ]
+}

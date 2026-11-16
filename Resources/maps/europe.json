@@ -1,0 +1,250 @@
+{
+ "id": "europe",
+ "name": "Europe",
+ "width": 760,
+ "height": 700,
+ "file": "europe.bin",
+ "landTiles": 254801,
+ "nations": [
+  {
+   "name": "Turkey",
+   "x": 656,
+   "y": 608
+  },
+  {
+   "name": "Sweden",
+   "x": 453,
+   "y": 169
+  },
+  {
+   "name": "Ukraine",
+   "x": 610,
+   "y": 420
+  },
+  {
+   "name": "France",
+   "x": 298,
+   "y": 467
+  },
+  {
+   "name": "Finland",
+   "x": 556,
+   "y": 138
+  },
+  {
+   "name": "Norway",
+   "x": 422,
+   "y": 142
+  },
+  {
+   "name": "Spain",
+   "x": 232,
+   "y": 582
+  },
+  {
+   "name": "Germany",
+   "x": 384,
+   "y": 385
+  },
+  {
+   "name": "Poland",
+   "x": 481,
+   "y": 366
+  },
+  {
+   "name": "United Kingdom",
+   "x": 244,
+   "y": 332
+  },
+  {
+   "name": "Belarus",
+   "x": 575,
+   "y": 340
+  },
+  {
+   "name": "Italy",
+   "x": 403,
+   "y": 524
+  },
+  {
+   "name": "Romania",
+   "x": 542,
+   "y": 481
+  },
+  {
+   "name": "Iceland",
+   "x": 69,
+   "y": 129
+  },
+  {
+   "name": "Syria",
+   "x": 689,
+   "y": 681
+  },
+  {
+   "name": "Tunisia",
+   "x": 375,
+   "y": 697
+  },
+  {
+   "name": "Bulgaria",
+   "x": 545,
+   "y": 538
+  },
+  {
+   "name": "Greece",
+   "x": 516,
+   "y": 599
+  },
+  {
+   "name": "Hungary",
+   "x": 482,
+   "y": 457
+  },
+  {
+   "name": "Austria",
+   "x": 424,
+   "y": 449
+  },
+  {
+   "name": "Czechia",
+   "x": 437,
+   "y": 410
+  },
+  {
+   "name": "Latvia",
+   "x": 541,
+   "y": 279
+  },
+  {
+   "name": "Ireland",
+   "x": 183,
+   "y": 346
+  },
+  {
+   "name": "Portugal",
+   "x": 184,
+   "y": 595
+  },
+  {
+   "name": "Lithuania",
+   "x": 530,
+   "y": 307
+  },
+  {
+   "name": "Serbia",
+   "x": 497,
+   "y": 511
+  },
+  {
+   "name": "Georgia",
+   "x": 743,
+   "y": 549
+  },
+  {
+   "name": "Estonia",
+   "x": 551,
+   "y": 245
+  },
+  {
+   "name": "Slovakia",
+   "x": 482,
+   "y": 429
+  },
+  {
+   "name": "Croatia",
+   "x": 449,
+   "y": 494
+  },
+  {
+   "name": "Bosnia and Herz.",
+   "x": 464,
+   "y": 512
+  },
+  {
+   "name": "Switzerland",
+   "x": 360,
+   "y": 464
+  },
+  {
+   "name": "Netherlands",
+   "x": 332,
+   "y": 363
+  },
+  {
+   "name": "Denmark",
+   "x": 373,
+   "y": 290
+  },
+  {
+   "name": "Moldova",
+   "x": 580,
+   "y": 456
+  },
+  {
+   "name": "Belgium",
+   "x": 321,
+   "y": 393
+  },
+  {
+   "name": "Russia",
+   "x": 644,
+   "y": 491
+  },
+  {
+   "name": "Albania",
+   "x": 489,
+   "y": 568
+  },
+  {
+   "name": "North Macedonia",
+   "x": 506,
+   "y": 560
+  },
+  {
+   "name": "Slovenia",
+   "x": 432,
+   "y": 476
+  },
+  {
+   "name": "Montenegro",
+   "x": 480,
+   "y": 538
+  },
+  {
+   "name": "Kosovo",
+   "x": 498,
+   "y": 542
+  },
+  {
+   "name": "Cyprus",
+   "x": 629,
+   "y": 683
+  },
+  {
+   "name": "N. Cyprus",
+   "x": 635,
+   "y": 676
+  },
+  {
+   "name": "Luxembourg",
+   "x": 337,
+   "y": 409
+  },
+  {
+   "name": "\u00c5land",
+   "x": 487,
+   "y": 216
+  },
+  {
+   "name": "Faeroe Is.",
+   "x": 196,
+   "y": 181
+  },
+  {
+   "name": "Isle of Man",
+   "x": 222,
+   "y": 327
+  }
+ ]
+}

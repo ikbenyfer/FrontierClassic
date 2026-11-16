@@ -1,0 +1,100 @@
+{
+ "id": "northamerica",
+ "name": "North America",
+ "width": 880,
+ "height": 680,
+ "file": "northamerica.bin",
+ "landTiles": 224911,
+ "nations": [
+  {
+   "name": "Canada",
+   "x": 495,
+   "y": 170
+  },
+  {
+   "name": "United States of America",
+   "x": 519,
+   "y": 354
+  },
+  {
+   "name": "Mexico",
+   "x": 494,
+   "y": 510
+  },
+  {
+   "name": "Nicaragua",
+   "x": 623,
+   "y": 621
+  },
+  {
+   "name": "Honduras",
+   "x": 611,
+   "y": 601
+  },
+  {
+   "name": "Cuba",
+   "x": 667,
+   "y": 533
+  },
+  {
+   "name": "Guatemala",
+   "x": 583,
+   "y": 593
+  },
+  {
+   "name": "Panama",
+   "x": 659,
+   "y": 664
+  },
+  {
+   "name": "Costa Rica",
+   "x": 629,
+   "y": 650
+  },
+  {
+   "name": "Dominican Rep.",
+   "x": 729,
+   "y": 561
+  },
+  {
+   "name": "Haiti",
+   "x": 713,
+   "y": 560
+  },
+  {
+   "name": "Greenland",
+   "x": 854,
+   "y": 52
+  },
+  {
+   "name": "Belize",
+   "x": 596,
+   "y": 578
+  },
+  {
+   "name": "El Salvador",
+   "x": 594,
+   "y": 612
+  },
+  {
+   "name": "Jamaica",
+   "x": 679,
+   "y": 568
+  },
+  {
+   "name": "Puerto Rico",
+   "x": 759,
+   "y": 567
+  },
+  {
+   "name": "Trinidad and Tobago",
+   "x": 797,
+   "y": 645
+  },
+  {
+   "name": "Bahamas",
+   "x": 674,
+   "y": 502
+  }
+ ]
+}

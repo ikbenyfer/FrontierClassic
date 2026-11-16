@@ -1,0 +1,34 @@
+{
+ "maps": [
+  {
+   "id": "world",
+   "name": "World Map",
+   "file": "world.json"
+  },
+  {
+   "id": "europe",
+   "name": "Europe",
+   "file": "europe.json"
+  },
+  {
+   "id": "asia",
+   "name": "Asia",
+   "file": "asia.json"
+  },
+  {
+   "id": "northamerica",
+   "name": "North America",
+   "file": "northamerica.json"
+  },
+  {
+   "id": "southamerica",
+   "name": "South America",
+   "file": "southamerica.json"
+  },
+  {
+   "id": "africa",
+   "name": "Africa",
+   "file": "africa.json"
+  }
+ ]
+}
