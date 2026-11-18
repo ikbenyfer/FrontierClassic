@@ -106,7 +106,11 @@ jobs:
           grep -q "tiles different between host and client: 0," shots.log
           for f in shots/*.bmp; do convert "$f" "${f%.bmp}.png" && rm "$f"; done
           ls -l shots
-          test "$(ls shots/*.png | wc -l)" -ge 24
+          test "$(ls shots/*.png | wc -l)" -ge 26
+          grep "DRAW:" shots.log
+          echo "== getekende vlag is een geldige PNG"
+          identify "$HOME/.local/share/YF/FrontierClassic/flag.png"
+          identify -format "%w x %h\n" "$HOME/.local/share/YF/FrontierClassic/flag.png" | grep -q "240 x 160"
 
       - uses: actions/upload-artifact@v4
         with:

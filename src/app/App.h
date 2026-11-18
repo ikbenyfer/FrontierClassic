@@ -10,7 +10,7 @@
 
 namespace fc {
 
-enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY, SCR_NAME, SCR_CHEATS };
+enum Screen { SCR_MENU, SCR_NEW, SCR_LOAD, SCR_INFO, SCR_GAME, SCR_FLAG, SCR_MP, SCR_JOIN, SCR_LOBBY, SCR_NAME, SCR_CHEATS, SCR_DRAW };
 enum NetMode { NET_OFF, NET_HOST, NET_CLIENT };
 enum Overlay { OV_NONE, OV_PAUSE, OV_GAMEOVER };
 
@@ -56,6 +56,7 @@ public:
     // player flag: Documents/flag.png (chosen from Photos or copied in via iTunes/Filza)
     bool loadFlag();
     void setFlagPixels(const uint8_t* rgba, int w, int h);
+    void openDrawScreen();  // flag drawing screen, starting from the current flag
     void removeFlag();
 
 private:
@@ -109,6 +110,21 @@ private:
     bool serverAddress(std::string& host, int& port) const;
     void renderName();
     void renderCheats();
+
+    // ---- flag drawing (60 x 40 cells, saved as flag.png)
+    std::vector<uint8_t> flagRGBA_;  // copy of the current flag (to start drawing from it)
+    int flagPxW_ = 0, flagPxH_ = 0;
+    std::vector<uint32_t> drawPx_;   // 0xRRGGBB per cell
+    std::vector<std::vector<uint32_t> > drawUndo_;
+    uint32_t drawColor_ = 0xAE1C28;
+    int drawBrush_ = 0;              // 0 small, 1 medium, 2 large
+    bool drawFill_ = false, drawing_ = false;
+    int drawLastX_ = -1, drawLastY_ = -1;
+    void renderDraw();
+    void drawPointer(float x, float y, bool start);
+    void paintCells(int cx, int cy);
+    void floodFill(int cx, int cy);
+    void saveDrawnFlag();
     Screen cheatsReturn_ = SCR_NEW;
     void playerList(float x, float y, const std::vector<std::string>& names, int self);
     int field_ = 0;                 // join screen: 0 = IP, 1 = port

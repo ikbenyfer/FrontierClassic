@@ -236,6 +236,49 @@ static void runMultiplayerShots(App& app, SDL_Window* win, const std::string& di
     app.screen = SCR_MENU;
 }
 
+// Draws a flag on the drawing screen with synthetic mouse events (tests the real input path).
+static void mouse(App& app, Uint32 type, int x, int y) {
+    SDL_Event e;
+    memset(&e, 0, sizeof e);
+    e.type = type;
+    if (type == SDL_MOUSEMOTION) {
+        e.motion.x = x;
+        e.motion.y = y;
+    } else {
+        e.button.button = SDL_BUTTON_LEFT;
+        e.button.x = x;
+        e.button.y = y;
+    }
+    app.handleEvent(e);
+}
+static void tapAt(App& app, SDL_Window* win, int x, int y) {
+    mouse(app, SDL_MOUSEBUTTONDOWN, x, y);
+    mouse(app, SDL_MOUSEBUTTONUP, x, y);
+    frame(app, win);
+}
+static void drawFlagWithMouse(App& app, SDL_Window* win) {
+    app.removeFlag();
+    app.openDrawScreen();
+    frame(app, win);
+    // palette is at x 782 + col*56, y 70 + row*56; canvas at (40,70), 12 px per cell
+    tapAt(app, win, 782 + 2 * 56 + 25, 70 + 25);       // red (palette 2)
+    tapAt(app, win, 782 + 114 + 50, 70 + 4 * 56 + 40);  // bucket
+    tapAt(app, win, 100, 100);                          // fill the whole (white) canvas red
+    tapAt(app, win, 782 + 0 * 56 + 25, 70 + 25);        // white
+    tapAt(app, win, 782 + 50, 70 + 4 * 56 + 40);        // brush
+    tapAt(app, win, 782 + 2 * 74 + 30, 70 + 4 * 56 + 14 + 62 + 26);  // large brush
+    mouse(app, SDL_MOUSEBUTTONDOWN, 40 + 30 * 12, 70 + 4 * 12);  // white cross: vertical
+    for (int y = 4; y <= 36; y += 2) mouse(app, SDL_MOUSEMOTION, 40 + 30 * 12, 70 + y * 12);
+    mouse(app, SDL_MOUSEBUTTONUP, 40 + 30 * 12, 70 + 36 * 12);
+    mouse(app, SDL_MOUSEBUTTONDOWN, 40 + 6 * 12, 70 + 20 * 12);  // horizontal
+    for (int x = 6; x <= 54; x += 3) mouse(app, SDL_MOUSEMOTION, 40 + x * 12, 70 + 20 * 12);
+    mouse(app, SDL_MOUSEBUTTONUP, 40 + 54 * 12, 70 + 20 * 12);
+    tapAt(app, win, 782 + 1 * 56 + 25, 70 + 2 * 56 + 25);  // dark green, small brush, a dot
+    tapAt(app, win, 782 + 30, 70 + 4 * 56 + 14 + 62 + 26);
+    mouse(app, SDL_MOUSEBUTTONDOWN, 40 + 10 * 12 + 6, 70 + 8 * 12 + 6);
+    mouse(app, SDL_MOUSEBUTTONUP, 40 + 10 * 12 + 6, 70 + 8 * 12 + 6);
+}
+
 static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     srand(5);
     app.screen = SCR_MENU;
@@ -268,6 +311,22 @@ static void runShots(App& app, SDL_Window* win, const std::string& dir) {
     }
     app.screen = SCR_FLAG;
     shot(app, win, dir + "/03b_flag.bmp");
+    drawFlagWithMouse(app, win);
+    shot(app, win, dir + "/03d_draw.bmp");
+    {   // save it: tap "Opslaan als vlag"
+        SDL_Event e;
+        memset(&e, 0, sizeof e);
+        e.type = SDL_MOUSEBUTTONDOWN;
+        e.button.button = SDL_BUTTON_LEFT;
+        e.button.x = 820;
+        e.button.y = 710;
+        app.handleEvent(e);
+        e.type = SDL_MOUSEBUTTONUP;
+        app.handleEvent(e);
+        frame(app, win);
+    }
+    printf("DRAW: screen after saving = %d (flag screen = %d)\n", (int)app.screen, (int)SCR_FLAG);
+    shot(app, win, dir + "/03e_flag_drawn.bmp");
 
     Settings s;
     s.mapId = "world";

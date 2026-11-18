@@ -1,6 +1,7 @@
 #include "App.h"
 #include "Music.h"
 #include "Flag.h"
+#include "Png.h"
 #include <stdlib.h>
 #include <string.h>
 #include <algorithm>
@@ -203,10 +204,12 @@ void App::pointerDown(float x, float y) {
     downTime_ = SDL_GetTicks();
     moved_ = false;
     downOnUI_ = screen != SCR_GAME || overlay != OV_NONE || overUI(x, y);
+    if (screen == SCR_DRAW) drawPointer(x, y, true);
 }
 
 void App::pointerMove(float x, float y, float dx, float dy) {
     if (std::fabs(x - downX_) + std::fabs(y - downY_) > 12) moved_ = true;
+    if (screen == SCR_DRAW && drawing_) drawPointer(x, y, false);
     if (screen == SCR_GAME && overlay == OV_NONE && !downOnUI_ && moved_) {
         camX_ -= dx / zoom_;
         camY_ -= dy / zoom_;
@@ -215,6 +218,7 @@ void App::pointerMove(float x, float y, float dx, float dy) {
 }
 
 void App::pointerUp(float x, float y) {
+    drawing_ = false;
     if (!moved_ && !multi_ && SDL_GetTicks() - downTime_ < 700) {
         tapPending_ = true;
         tapX_ = x;
@@ -938,6 +942,7 @@ void App::render(int winW, int winH, int drawW, int drawH, int vpX, int vpY) {
         case SCR_LOBBY: renderLobby(); break;
         case SCR_NAME: renderName(); break;
         case SCR_CHEATS: renderCheats(); break;
+        case SCR_DRAW: renderDraw(); break;
     }
     if (!toast_.empty() && SDL_GetTicks() < toastUntil_) {
         float w = gfx.textWidth(toast_, 20) + 40;
@@ -1153,12 +1158,19 @@ bool App::loadFlag() {
 }
 
 void App::setFlagPixels(const uint8_t* rgba, int w, int h) {
+    if (rgba && w > 0 && h > 0) {
+        flagRGBA_.assign(rgba, rgba + (size_t)w * h * 4);
+        flagPxW_ = w;
+        flagPxH_ = h;
+    }
     gfx.setFlag(rgba, w, h);
     if (game.map.w) gfx.refreshMap(game);
 }
 
 void App::removeFlag() {
     remove((saveDir_ + "flag.png").c_str());
+    flagRGBA_.clear();
+    flagPxW_ = flagPxH_ = 0;
     gfx.setFlag(0, 0, 0);
     if (game.map.w) gfx.refreshMap(game);
 }
@@ -1199,12 +1211,13 @@ void App::renderFlag() {
         gfx.text(W_ * 0.5f, py + ph * 0.5f - 14, "Nog geen vlag gekozen", 24, C_DIM, 1);
     }
 
-    float bw = 300, by = py + ph + 30;
-    if (button(W_ * 0.5f - bw - 10, by, bw, 66, "Kies afbeelding", true)) {
+    float bw = 250, by = py + ph + 30, bx = (W_ - (3 * bw + 32)) * 0.5f;
+    if (button(bx, by, bw, 66, "Zelf tekenen", true)) openDrawScreen();
+    if (button(bx + bw + 16, by, bw, 66, "Kies afbeelding", true)) {
         if (!fc_flag_pick((saveDir_ + "flag.png").c_str()))
             showToast("Fotobibliotheek is hier niet beschikbaar");
     }
-    if (button(W_ * 0.5f + 10, by, bw, 66, "Vlag verwijderen", false, gfx.hasFlag())) {
+    if (button(bx + 2 * (bw + 16), by, bw, 66, "Vlag verwijderen", false, gfx.hasFlag())) {
         removeFlag();
         showToast("Vlag verwijderd");
     }
@@ -1216,6 +1229,168 @@ void App::renderFlag() {
         showToast(loadFlag() ? "Vlag geladen" : "Geen flag.png gevonden");
     }
     if (button(40, H_ - 90.0f, 220, 66, "Terug")) screen = SCR_MENU;
+}
+
+// ------------------------------------------------------------------ flag drawing
+
+static const int kDrawW = 60, kDrawH = 40;  // cells (3:2 like most flags)
+static const float kDrawCell = 12, kDrawX = 40, kDrawY = 70;
+static const int kDrawScale = 4;            // saved flag: 240 x 160 pixels, sharp edges
+static const uint32_t kDrawPalette[16] = {
+    0xFFFFFF, 0x000000, 0xAE1C28, 0x21468B, 0xFF7F00, 0xFFD700, 0x009B48, 0x0B5D1E,
+    0x4FA3E0, 0x0A1F44, 0x7B2D8E, 0xF28AB0, 0x7B4A12, 0xB8860B, 0x888888, 0xCCCCCC,
+};
+
+void App::openDrawScreen() {
+    drawPx_.assign(kDrawW * kDrawH, 0xFFFFFF);
+    if (!flagRGBA_.empty() && flagPxW_ > 0 && flagPxH_ > 0) {  // start from the current flag
+        for (int y = 0; y < kDrawH; ++y)
+            for (int x = 0; x < kDrawW; ++x) {
+                int sx = std::min(flagPxW_ - 1, (int)((x + 0.5f) * flagPxW_ / kDrawW));
+                int sy = std::min(flagPxH_ - 1, (int)((y + 0.5f) * flagPxH_ / kDrawH));
+                const uint8_t* p = &flagRGBA_[((size_t)sy * flagPxW_ + sx) * 4];
+                drawPx_[y * kDrawW + x] = ((uint32_t)p[0] << 16) | ((uint32_t)p[1] << 8) | p[2];
+            }
+    }
+    drawUndo_.clear();
+    drawing_ = false;
+    screen = SCR_DRAW;
+}
+
+void App::paintCells(int cx, int cy) {
+    int r = drawBrush_ == 0 ? 0 : (drawBrush_ == 1 ? 1 : 3);
+    for (int dy = -r; dy <= r; ++dy)
+        for (int dx = -r; dx <= r; ++dx) {
+            if (dx * dx + dy * dy > r * r + r) continue;
+            int x = cx + dx, y = cy + dy;
+            if (x >= 0 && y >= 0 && x < kDrawW && y < kDrawH) drawPx_[y * kDrawW + x] = drawColor_;
+        }
+}
+
+void App::floodFill(int cx, int cy) {
+    uint32_t from = drawPx_[cy * kDrawW + cx];
+    if (from == drawColor_) return;
+    std::vector<int> stack(1, cy * kDrawW + cx);
+    while (!stack.empty()) {
+        int t = stack.back();
+        stack.pop_back();
+        if (drawPx_[t] != from) continue;
+        drawPx_[t] = drawColor_;
+        int x = t % kDrawW, y = t / kDrawW;
+        if (x > 0) stack.push_back(t - 1);
+        if (x < kDrawW - 1) stack.push_back(t + 1);
+        if (y > 0) stack.push_back(t - kDrawW);
+        if (y < kDrawH - 1) stack.push_back(t + kDrawW);
+    }
+}
+
+void App::drawPointer(float x, float y, bool start) {
+    int cx = (int)std::floor((x - kDrawX) / kDrawCell), cy = (int)std::floor((y - kDrawY) / kDrawCell);
+    bool inside = cx >= 0 && cy >= 0 && cx < kDrawW && cy < kDrawH;
+    if (start) {
+        if (!inside) return;
+        drawUndo_.push_back(drawPx_);
+        if (drawUndo_.size() > 20) drawUndo_.erase(drawUndo_.begin());
+        if (drawFill_) {
+            floodFill(cx, cy);
+            return;
+        }
+        drawing_ = true;
+        paintCells(cx, cy);
+        drawLastX_ = cx;
+        drawLastY_ = cy;
+        return;
+    }
+    // a line from the last point, so fast strokes have no gaps
+    cx = std::max(-4, std::min(kDrawW + 4, cx));
+    cy = std::max(-4, std::min(kDrawH + 4, cy));
+    int steps = std::max(std::abs(cx - drawLastX_), std::abs(cy - drawLastY_));
+    for (int k = 1; k <= steps; ++k)
+        paintCells(drawLastX_ + (cx - drawLastX_) * k / steps, drawLastY_ + (cy - drawLastY_) * k / steps);
+    drawLastX_ = cx;
+    drawLastY_ = cy;
+}
+
+void App::saveDrawnFlag() {
+    const int w = kDrawW * kDrawScale, h = kDrawH * kDrawScale;
+    std::vector<uint8_t> rgba((size_t)w * h * 4);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            uint32_t c = drawPx_[(y / kDrawScale) * kDrawW + x / kDrawScale];
+            uint8_t* p = &rgba[((size_t)y * w + x) * 4];
+            p[0] = (uint8_t)(c >> 16);
+            p[1] = (uint8_t)(c >> 8);
+            p[2] = (uint8_t)c;
+            p[3] = 255;
+        }
+    bool ok = writePngRGB(saveDir_ + "flag.png", &rgba[0], w, h);
+    setFlagPixels(&rgba[0], w, h);
+    showToast(ok ? "Je vlag is opgeslagen" : "Vlag ingesteld, maar opslaan mislukte");
+}
+
+void App::renderDraw() {
+    gfx.rect(0, 0, (float)W_, (float)H_, 0x0F1A2BFF);
+    gfx.text(W_ * 0.5f, 14, "Teken je vlag", 36, C_TEXT, 1);
+
+    // canvas: runs of the same colour become one rectangle
+    const float cw = kDrawW * kDrawCell, ch = kDrawH * kDrawCell;
+    gfx.rect(kDrawX - 3, kDrawY - 3, cw + 6, ch + 6, 0x3A4A66FF);
+    for (int y = 0; y < kDrawH; ++y) {
+        int x = 0;
+        while (x < kDrawW) {
+            uint32_t c = drawPx_[y * kDrawW + x];
+            int e = x + 1;
+            while (e < kDrawW && drawPx_[y * kDrawW + e] == c) ++e;
+            gfx.rect(kDrawX + x * kDrawCell, kDrawY + y * kDrawCell, (e - x) * kDrawCell, kDrawCell, (c << 8) | 0xFF);
+            x = e;
+        }
+    }
+    block(kDrawX, kDrawY, cw, ch);
+
+    // colours
+    float px = 782, py = kDrawY;
+    for (int k = 0; k < 16; ++k) {
+        float x = px + (k % 4) * 56.0f, y = py + (k / 4) * 56.0f;
+        bool sel = kDrawPalette[k] == drawColor_;
+        gfx.rect(x - 3, y - 3, 56, 56, sel ? C_ACCENT : 0x3A4A66FF);
+        gfx.rect(x, y, 50, 50, (kDrawPalette[k] << 8) | 0xFF);
+        block(x, y, 50, 50);
+        if (hit(x, y, 50, 50)) drawColor_ = kDrawPalette[k];
+    }
+    // tools
+    float ty = py + 4 * 56 + 14;
+    if (button(px, ty, 106, 52, "Penseel", !drawFill_)) drawFill_ = false;
+    if (button(px + 114, ty, 106, 52, "Emmer", drawFill_)) drawFill_ = true;
+    ty += 62;
+    static const char* sizes[3] = {"Klein", "Middel", "Groot"};
+    for (int k = 0; k < 3; ++k)
+        if (button(px + k * 74.0f, ty, 68, 52, sizes[k], !drawFill_ && drawBrush_ == k)) {
+            drawBrush_ = k;
+            drawFill_ = false;
+        }
+    ty += 62;
+    if (button(px, ty, 220, 52, "Ongedaan maken", false, !drawUndo_.empty())) {
+        drawPx_ = drawUndo_.back();
+        drawUndo_.pop_back();
+    }
+    ty += 62;
+    if (button(px, ty, 220, 52, "Alles in deze kleur")) {
+        drawUndo_.push_back(drawPx_);
+        if (drawUndo_.size() > 20) drawUndo_.erase(drawUndo_.begin());
+        std::fill(drawPx_.begin(), drawPx_.end(), drawColor_);
+    }
+
+    // hint + current colour
+    gfx.text(kDrawX, kDrawY + ch + 16, drawFill_ ? "Emmer: tik op een vlak om het te vullen." : "Teken met je vinger (of de muis).", 18,
+             C_DIM);
+    gfx.rect(kDrawX + cw - 120, kDrawY + ch + 12, 120, 28, (drawColor_ << 8) | 0xFF);
+    gfx.frame(kDrawX + cw - 120, kDrawY + ch + 12, 120, 28, 2, 0x3A4A66FF);
+
+    if (button(40, H_ - 90.0f, 220, 66, "Annuleren")) screen = SCR_FLAG;
+    if (button(W_ - 380.0f, H_ - 90.0f, 340, 66, "Opslaan als vlag", true)) {
+        saveDrawnFlag();
+        screen = SCR_FLAG;
+    }
 }
 
 // ------------------------------------------------------------------ game screen

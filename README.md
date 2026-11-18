@@ -30,6 +30,7 @@ Singleplayer werkt volledig offline. Voor multiplayer: zie hieronder.
 | Economy | Gold (land + markets) and resources (land + mines; mines can be built anywhere on your land). Buildings: City, Market, Mine, Fort, each upgradable to level 3. Recruiting: 1000 gold → 1500 troops. |
 | AI | 10–50 opponents at 3 levels. They expand, build, upgrade, attack the weakest neighbour, strike back at whoever attacks them (including you) and use ships when they are boxed in. |
 | Modes | Free For All, Teams (2–4), Conquest (last one standing), Sandbox (plenty of gold, AI can be peaceful), Custom Game (teams, starting gold, win %, troop growth). |
+| Own flag | Jouw vlag: draw one yourself (60x40 canvas, 16 colours, brush sizes, fill bucket, undo), pick an image, or put `flag.png` in the app's Documents. Your territory is filled with it. |
 | Cheats | Single player only (Nieuw spel > Cheats, or Menu > Cheats during a game): infinite troops, infinite gold, infinite resources, invincible, fast conquest. |
 | Controls | Drag = move, pinch = zoom, tap = attack / build / select. Big buttons, landscape only. |
 | Saving | Autosave every minute and when the app goes to the background, plus 3 slots. Plain JSON files in the app's `Documents` folder (also visible through iTunes file sharing). Your new-game settings are remembered. |
